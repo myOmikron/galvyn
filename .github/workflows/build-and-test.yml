@@ -1,0 +1,40 @@
+---
+name: build & test
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "**/*.md"
+  push:
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: moonrepo/setup-rust@v1
+        with:
+          components: clippy
+          bins: cargo-deny
+          cache-target: release
+
+      - name: Run rust-clippy
+        run: cargo clippy --workspace
+        env:
+          RUSTFLAGS: "-Dwarnings"
+        continue-on-error: true
+
+      - name: Run cargo-deny
+        run: cargo deny check --hide-inclusion-graph
+
+      - name: Build galvyn
+        run: cargo build -p galvyn
