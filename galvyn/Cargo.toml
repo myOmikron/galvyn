@@ -3,7 +3,7 @@ name = "galvyn"
 version = "0.1.0"
 edition = "2021"
 authors = ["Niklas Pfister <git@omikron.dev>"]
-license = "MPL-2"
+license = "MPL-2.0"
 description = "Core-component for the galvyn web-framework"
 
 [dependencies]
