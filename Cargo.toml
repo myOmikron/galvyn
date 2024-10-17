@@ -2,4 +2,7 @@
 resolver = "2"
 members = [
     "./galvyn",
+    "./galvyn-core",
+    "./contrib/galvyn-contrib-tracing",
+    "./example/blog",
 ]

@@ -1,0 +1,14 @@
+[package]
+name = "blog"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+description = "A blog created with galvyn"
+
+[dependencies]
+# Framework
+galvyn = { path = "../../galvyn", version = "*", features = ["contrib"] }
+
+# async runtime
+tokio = { version = ">=1.23.1", features = ["full"] }
