@@ -1,6 +1,7 @@
 # galvyn
 
 [![GitHub License](https://img.shields.io/github/license/myOmikron/galvyn)](https://github.com/myOmikron/galvyn/blob/main/LICENSE)
+[![Crates.io Version](https://img.shields.io/crates/v/galvyn)](https://crates.io/crates/galvyn)
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/galvyn)](https://crates.io/crates/galvyn)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/myOmikron/galvyn/build-and-test.yml)](https://github.com/myOmikron/galvyn/actions/workflows/build-and-test.yml)
 
