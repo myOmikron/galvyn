@@ -16,7 +16,27 @@ use tera::Tera;
 
 use crate::output::print_info;
 
-pub fn run_init(name: String) {}
+static CRATE_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/templates/crate");
+
+/// Initialize a new galvyn project
+pub fn run_init(name: String, path: String) -> anyhow::Result<()> {
+    let p = Path::new(&path);
+
+    if !p.is_dir() {
+        return Err(anyhow!("{path} does not exist"));
+    }
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("crate_name", &name);
+
+    create_dir(p.join(&name)).with_context(|| "Couldn't create initial directory")?;
+
+    // Recursively create structure and evaluate tera templates
+    create_entries(&ctx, &p.join(&name), MOD_DIR.entries())
+        .with_context(|| "Error evaluating and writing templates")?;
+
+    Ok(())
+}
 
 static MOD_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/templates/module");
 

@@ -1,0 +1,17 @@
+[package]
+name = "{{ crate_name }}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Webframework
+galvyn = { version = "*" }
+
+# database ORM
+rorm = { version = "~0.6", default-features = false, features = ["tokio", "postgres-only", "uuid", "cli", "time"] }
+
+# Serialization library
+serde = { version = "~1", features = ["derive"] }
+
+# Async runtime
+tokio = { version = ">=1.23.1", features = ["full"] }

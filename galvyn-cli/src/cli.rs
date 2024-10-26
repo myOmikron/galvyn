@@ -16,6 +16,10 @@ pub enum Command {
     Init {
         /// Name of the project
         name: String,
+
+        /// Path in which the new module should be created
+        #[clap(short, long, default_value_t = String::from("./"))]
+        path: String,
     },
 
     /// Create a new module
