@@ -1,0 +1,33 @@
+[package]
+name = "galvyn-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+description = "CLI tool for galvyn"
+license = "MPL-2.0"
+
+[[bin]]
+name = "galvyn"
+path = "./src/main.rs"
+
+[dependencies]
+# Error handling
+anyhow = { version = "~1" }
+
+# CLI parser
+clap = { version = "~4", features = ["derive"] }
+
+# Conversion of casing of strings
+convert_case = { version = "~0.6" }
+
+# Embed directory
+include_dir = { version = "~0.7" }
+
+# Colors!
+owo-colors = { version = "~4" }
+
+# Rust TokenTree parser
+syn = { version = "~2" }
+
+# Templating
+tera = { version = "~1" }
