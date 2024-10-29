@@ -3,9 +3,9 @@ resolver = "2"
 members = [
     "./galvyn",
     "./galvyn-cli",
+    "./galvyn-macros",
     "./galvyn-core",
     "./contrib/galvyn-contrib-tracing",
     "./swaggapi",
-    "./swaggapi-macro",
     "./example/blog",
 ]

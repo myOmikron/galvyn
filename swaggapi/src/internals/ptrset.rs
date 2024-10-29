@@ -62,7 +62,7 @@ impl<'a, T: ?Sized> Hash for ComparePtr<'a, T> {
 }
 impl<'a, T: ?Sized> Ord for ComparePtr<'a, T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.into_ptr().cmp(&other.into_ptr())
+        self.into_ptr().cast::<()>().cmp(&other.into_ptr().cast::<()>())
     }
 }
 impl<'a, T: ?Sized> PartialOrd for ComparePtr<'a, T> {

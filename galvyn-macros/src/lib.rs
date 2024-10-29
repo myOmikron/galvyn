@@ -1,12 +1,7 @@
 mod handler;
-mod page;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(SwaggapiPage, attributes(page))]
-pub fn derive_page(input: TokenStream) -> TokenStream {
-    page::page(input.into()).into()
-}
 
 #[proc_macro_attribute]
 pub fn handler(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -15,40 +10,40 @@ pub fn handler(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn get(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Get")).into()
+    handler::handler(args.into(), input.into(), Some("GET")).into()
 }
 
 #[proc_macro_attribute]
 pub fn post(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Post")).into()
+    handler::handler(args.into(), input.into(), Some("POST")).into()
 }
 
 #[proc_macro_attribute]
 pub fn put(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Put")).into()
+    handler::handler(args.into(), input.into(), Some("PUT")).into()
 }
 
 #[proc_macro_attribute]
 pub fn delete(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Delete")).into()
+    handler::handler(args.into(), input.into(), Some("DELETE")).into()
 }
 
 #[proc_macro_attribute]
 pub fn head(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Head")).into()
+    handler::handler(args.into(), input.into(), Some("HEAD")).into()
 }
 
 #[proc_macro_attribute]
 pub fn options(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Options")).into()
+    handler::handler(args.into(), input.into(), Some("OPTIONS")).into()
 }
 
 #[proc_macro_attribute]
 pub fn patch(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Patch")).into()
+    handler::handler(args.into(), input.into(), Some("PATCH")).into()
 }
 
 #[proc_macro_attribute]
 pub fn trace(args: TokenStream, input: TokenStream) -> TokenStream {
-    handler::handler(args.into(), input.into(), Some("Trace")).into()
+    handler::handler(args.into(), input.into(), Some("TRACE")).into()
 }

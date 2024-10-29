@@ -75,21 +75,6 @@ impl HandlerArgument for RawForm {
     }
 }
 */
-
-#[cfg(feature = "dep:axum/multipart")]
-const _: () = {
-    use axum::extract::Multipart;
-    impl ShouldBeHandlerArgument for Multipart {}
-    impl HandlerArgument for Multipart {
-        fn request_body(_gen: &mut SchemaGenerator) -> Option<RequestBody> {
-            Some(simple_request_body(SimpleRequestBody {
-                mime_type: mime::MULTIPART_FORM_DATA,
-                schema: None,
-            }))
-        }
-    }
-};
-
 impl<T> ShouldBeHandlerArgument for Path<T> {}
 impl<T: DeserializeOwned + JsonSchema> HandlerArgument for Path<T> {
     fn parameters(gen: &mut SchemaGenerator, path: &[&str]) -> Vec<Parameter> {

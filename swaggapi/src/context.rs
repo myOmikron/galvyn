@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-
+use std::ops::Deref;
 use axum::extract::Request;
 use axum::response::IntoResponse;
 use axum::routing::Route;
@@ -7,12 +7,9 @@ use axum::routing::Router;
 use tower::Layer;
 use tower::Service;
 
-use crate::internals::SwaggapiHandler;
-use crate::internals::SwaggapiPageBuilderImpl;
-use crate::internals::{AccessSwaggapiPageBuilder, ContextHandler};
-use crate::page::SwaggapiPageBuilder;
-use crate::PageOfEverything;
-use crate::SwaggapiPage;
+use crate::{SwaggapiPage, PAGE_OF_EVERYTHING};
+use crate::handler::{Handler, HandlerMeta};
+use crate::internals::ptrset::PtrSet;
 
 /// An `ApiContext` combines several [`SwaggapiHandler`] under a common path.
 ///
@@ -33,7 +30,7 @@ pub struct ApiContext {
     path: String,
 
     /// Changes have to be applied to already existing `handlers` manually
-    pages: Vec<&'static SwaggapiPageBuilder>,
+    pages: Vec<&'static SwaggapiPage>,
 
     /// Changes have to be applied to already existing `handlers` manually
     tags: Vec<&'static str>,
@@ -66,17 +63,17 @@ impl ApiContext {
     }
 
     /// Add a handler to the context
-    pub fn handler(mut self, handler: SwaggapiHandler) -> Self {
-        self.push_handler(ContextHandler::new(handler));
-        self.router = self.router.route(&handler.path, (handler.method_router)());
+    pub fn handler(mut self, handler: impl Handler) -> Self {
+        self.push_handler(ContextHandler::new(handler.meta()));
+        self.router = self.router.route(&handler.meta().path, handler.method_router());
         self
     }
 
     /// Attach a [`SwaggapiPage`] this context's handlers will be added to
-    pub fn page(mut self, page: impl SwaggapiPage) -> Self {
-        self.pages.push(page.get_builder());
+    pub fn page(mut self, page: &'static SwaggapiPage) -> Self {
+        self.pages.push(page);
         for handler in &mut self.handlers {
-            handler.pages.insert(page.get_builder());
+            handler.pages.insert(page);
         }
         self
     }
@@ -105,9 +102,9 @@ impl ApiContext {
         for mut handler in self.handlers {
             handler.path = framework_path_to_openapi(handler.path);
 
-            SwaggapiPageBuilderImpl::add_handler(PageOfEverything.get_builder(), &handler);
+            PAGE_OF_EVERYTHING.add_handler(&handler);
             for page in handler.pages.iter() {
-                SwaggapiPageBuilderImpl::add_handler(page, &handler);
+                page.add_handler(&handler);
             }
         }
         return self.router;
@@ -191,5 +188,39 @@ impl ApiContext {
 impl From<ApiContext> for Router {
     fn from(context: ApiContext) -> Self {
         context.finish()
+    }
+}
+
+/// A wrapped [`HandlerMeta`] used inside [`ApiContext`] to allow modifications.
+#[derive(Debug)]
+pub(crate) struct ContextHandler {
+    /// The original unmodified [`HandlerMeta`]
+    pub original: HandlerMeta,
+
+    /// The handler's modified path
+    pub path: String,
+
+    /// The handler's modified path
+    pub tags: PtrSet<'static, str>,
+
+    /// The pages the handler should be added to
+    pub pages: PtrSet<'static, SwaggapiPage>,
+}
+impl ContextHandler {
+    /// Constructs a new `ContextHandler`
+    pub fn new(original: HandlerMeta) -> Self {
+        Self {
+            path: original.path.to_string(),
+            tags: PtrSet::from_iter(original.tags.iter().copied()),
+            pages: PtrSet::new(),
+            original,
+        }
+    }
+}
+impl Deref for ContextHandler {
+    type Target = HandlerMeta;
+
+    fn deref(&self) -> &Self::Target {
+        &self.original
     }
 }

@@ -11,3 +11,7 @@ pub use crate::galvyn::*;
 
 pub mod error;
 mod galvyn;
+mod macro_docs;
+
+pub use macro_docs::*;
+pub use swaggapi;

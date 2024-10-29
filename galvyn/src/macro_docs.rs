@@ -1,15 +1,15 @@
-//! Documented re-exports of [`swaggapi_macro`]
+//! Documented re-exports of [`galvyn_macros`]
 
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `DELETE`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::delete;
+pub use galvyn_macros::delete;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `GET`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::get;
+pub use galvyn_macros::get;
 /// Turns a function into a documented api handler
 ///
 /// ```rust
@@ -63,53 +63,34 @@ pub use swaggapi_macro::get;
 /// - [`#[options(...)]`](options) is equivalent to `#[handler(Options, ...)]`
 /// - [`#[patch(...)]`](patch) is equivalent to `#[handler(Patch, ...)]`
 /// - [`#[trace(...)]`](trace) is equivalent to `#[handler(Trace, ...)]`
-pub use swaggapi_macro::handler;
+pub use galvyn_macros::handler;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `HEAD`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::head;
+pub use galvyn_macros::head;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `OPTIONS`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::options;
+pub use galvyn_macros::options;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `PATCH`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::patch;
+pub use galvyn_macros::patch;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `POST`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::post;
+pub use galvyn_macros::post;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `PUT`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::put;
+pub use galvyn_macros::put;
 /// Turns a function into a documented api handler
 ///
 /// Unlike `#[handler]` it uses the http method `TRACE`,
 /// for everything else please refer to [``#[handler]``](handler)
-pub use swaggapi_macro::trace;
-/// Derives [`SwaggapiPage`](trait@crate::SwaggapiPage) for a unit struct
-///
-/// ```rust
-/// # use swaggapi_macro::SwaggapiPage;
-/// #[derive(SwaggapiPage)]
-/// #[page(title = "My custom subset of api endpoints")]
-/// struct MyCustomApiPAge;
-/// ```
-///
-/// ## Arguments
-/// are passed through the helper `#[page(...)]`.
-///
-/// All arguments are of shape `key = "value"`
-/// where the list of keys and their description
-/// can be taken from [`SwaggapiPageBuilder`](crate::SwaggapiPageBuilder)'s methods.
-///
-/// ### Noteworthy differences from the builder:
-/// - `filename` will default to the struct's identifier (followed by `.json`)
-pub use swaggapi_macro::SwaggapiPage;
+pub use galvyn_macros::trace;
