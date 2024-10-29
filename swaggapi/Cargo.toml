@@ -1,0 +1,22 @@
+[package]
+name = "swaggapi"
+description = "Auto-generated OpenAPI documentation"
+version = "0.2.2"
+edition = "2021"
+license = "MIT"
+authors = ["gammelalf"]
+repository = "https://github.com/gammelalf/swaggapi"
+
+[dependencies]
+swaggapi-macro = { version = "0.2.0", path = "../swaggapi-macro" }
+openapiv3 = "~2"
+indexmap = "~2"
+mime = "~0.3"
+schemars = "~0.8"
+log = "~0.4"
+serde = { version = "~1", features = ["rc"] }
+serde_json = "~1"
+regex = "~1"
+axum = { version = "~0.7", features = ["macros"] }
+bytes = { version = "~1" }
+tower = { version = "~0.4" }
