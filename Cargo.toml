@@ -5,7 +5,8 @@ members = [
     "./galvyn-cli",
     "./galvyn-macros",
     "./galvyn-core",
+    "./contrib/galvyn-contrib-auth",
     "./contrib/galvyn-contrib-tracing",
-    "./swaggapi",
     "./example/blog",
+    "./swaggapi",
 ]
