@@ -7,18 +7,20 @@ use std::ops::Deref;
 use tower::Layer;
 use tower::Service;
 
-use crate::handler::{Handler, HandlerMeta};
+use crate::handler::{GalvynHandler, HandlerMeta};
 use crate::internals::ptrset::PtrSet;
 use crate::{SwaggapiPage, PAGE_OF_EVERYTHING};
 
 /// An `GalvynRouter` combines several [`SwaggapiHandler`] under a common path.
 ///
 /// It is also responsible for adding them to [`SwaggapiPage`]s once mounted to your application.
+///
+/// TODO: update these docs
 #[derive(Debug)]
 pub struct GalvynRouter {
-    /* The same collection of handlers in swaggapi and framework specific representation */
     /// The contained handlers
     handlers: Vec<MutHandlerMeta>,
+
     /// The underlying axum router
     router: Router,
 
@@ -45,6 +47,8 @@ impl GalvynRouter {
     /// # use swaggapi::GalvynRouter;
     /// let app = Router::new().merge(GalvynRouter::new("/api"));
     /// ```
+    ///
+    /// TODO: update these docs
     pub fn new() -> Self {
         Self {
             handlers: Vec::new(),
@@ -63,7 +67,7 @@ impl GalvynRouter {
     }
 
     /// Add a handler to the router
-    pub fn handler(mut self, handler: impl Handler) -> Self {
+    pub fn handler(mut self, handler: impl GalvynHandler) -> Self {
         self.push_handler(MutHandlerMeta::new(handler.meta()));
         self.router = self
             .router
