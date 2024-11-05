@@ -2,17 +2,16 @@
 // #![warn(clippy::todo)]
 
 pub mod as_responses;
-mod context;
+pub mod handler;
 pub mod handler_argument;
 pub mod internals;
 mod page;
+mod router;
 pub mod utils;
-pub mod handler;
 
-
-pub use self::context::ApiContext;
-pub use self::page::PAGE_OF_EVERYTHING;
 pub use self::page::SwaggapiPage;
+pub use self::page::PAGE_OF_EVERYTHING;
+pub use self::router::GalvynRouter;
 
 /// Reexports for macros and implementors
 pub mod re_exports {

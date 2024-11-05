@@ -1,14 +1,16 @@
+use crate::internals::{convert_schema, SchemaGenerator};
+use crate::router::MutHandlerMeta;
+use axum::http::Method;
 use core::fmt;
+use indexmap::IndexMap;
+use openapiv3::{
+    Components, Contact, Info, License, OpenAPI, Operation, PathItem, Paths, ReferenceOr,
+};
+use regex::Regex;
+use schemars::schema::Schema;
+use schemars::JsonSchema;
 use std::collections::BTreeMap;
 use std::sync::{Arc, LazyLock, Mutex};
-use axum::http::Method;
-use indexmap::IndexMap;
-use openapiv3::{Components, Contact, Info, License, OpenAPI, Operation, PathItem, Paths, ReferenceOr};
-use regex::Regex;
-use schemars::JsonSchema;
-use schemars::schema::Schema;
-use crate::context::ContextHandler;
-use crate::internals::{convert_schema,  SchemaGenerator};
 
 /// An implicit [`SwaggapiPage`] which will always contain your entire api
 pub static PAGE_OF_EVERYTHING: SwaggapiPage = SwaggapiPage::new();
@@ -178,16 +180,14 @@ impl SwaggapiPage {
                 contact: (contact_name.is_some()
                     || contact_url.is_some()
                     || contact_email.is_some())
-                    .then(|| Contact {
-                        name: contact_name.map(str::to_string),
-                        url: contact_url.map(str::to_string),
-                        email: contact_email.map(str::to_string),
-                        extensions: Default::default(),
-                    }),
+                .then(|| Contact {
+                    name: contact_name.map(str::to_string),
+                    url: contact_url.map(str::to_string),
+                    email: contact_email.map(str::to_string),
+                    extensions: Default::default(),
+                }),
                 license: (license_name.is_some() || license_url.is_some()).then(|| License {
-                    name: license_name
-                        .unwrap_or("Unnamed License")
-                        .to_string(),
+                    name: license_name.unwrap_or("Unnamed License").to_string(),
                     url: license_url.map(str::to_string),
                     extensions: Default::default(),
                 }),
@@ -228,7 +228,7 @@ impl SwaggapiPage {
     }
 
     /// Add a handler to this api page
-    pub(crate) fn add_handler(&self, handler: &ContextHandler) {
+    pub(crate) fn add_handler(&self, handler: &MutHandlerMeta) {
         let mut guard = self.state.lock().unwrap();
         let state = guard.get_or_insert_with(Default::default);
         state.last_build = None;
@@ -239,7 +239,8 @@ impl SwaggapiPage {
                 let mut request_body = Vec::new();
                 for arg in handler.handler_arguments {
                     if let Some(arg) = arg.as_ref() {
-                        static PATH_PARAM_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{[^}]*}").unwrap());
+                        static PATH_PARAM_REGEX: LazyLock<Regex> =
+                            LazyLock::new(|| Regex::new(r"\{[^}]*}").unwrap());
                         let path_params = PATH_PARAM_REGEX
                             .find_iter(&handler.path)
                             .map(|needle| &handler.path[(needle.start() + 1)..(needle.end() - 1)])
@@ -306,4 +307,3 @@ impl SwaggapiPage {
         *operation_mut = Some(operation);
     }
 }
-
