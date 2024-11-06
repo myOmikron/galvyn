@@ -12,6 +12,7 @@ use openapiv3::RequestBody;
 use openapiv3::Schema;
 
 use crate::internals::SchemaGenerator;
+use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
 
 /// Marker trait
 pub trait ShouldBeHandlerArgument {}
@@ -70,105 +71,12 @@ pub struct SimpleRequestBody {
     pub schema: Option<ReferenceOr<Schema>>,
 }
 
-#[doc(hidden)]
-pub mod macro_helper {
-    use std::marker::PhantomData;
-    use std::ops::Deref;
-
-    use super::HandlerArgument;
-    use super::HandlerArgumentFns;
-    use super::ShouldBeHandlerArgument;
-
-    /// Feed the result of `probe.get_handler_argument` to this function to check
-    /// if [`HandlerArgument`] is implemented for a [`ShouldBeHandlerArgument`] type
-    pub const fn check_handler_argument<T: HandlerArgument>(_: fn() -> PhantomData<T>) {}
-    pub const fn get_handler_argument_fns<T: HandlerArgument, IsHandler: Boolean>(
-        _: fn() -> PhantomData<T>,
-        _: fn() -> IsHandler,
-    ) -> Option<HandlerArgumentFns> {
-        if IsHandler::VALUE {
-            Some(HandlerArgumentFns {
-                request_body: T::request_body,
-                parameters: T::parameters,
-            })
-        } else {
-            None
+impl<T: ShouldBeHandlerArgument> ShouldHaveMetadata<HandlerArgumentFns> for T {}
+impl<T: HandlerArgument> HasMetadata<HandlerArgumentFns> for T {
+    fn metadata() -> HandlerArgumentFns {
+        HandlerArgumentFns {
+            request_body: T::request_body,
+            parameters: T::parameters,
         }
-    }
-
-    impl<T> TraitProbe<T>
-    where
-        T: ShouldBeHandlerArgument,
-    {
-        pub fn should_be_handler_argument(&self) -> bool {
-            true
-        }
-
-        pub fn get_handler_argument(&self) -> PhantomData<T> {
-            PhantomData
-        }
-    }
-
-    impl<T> TraitProbe<T>
-    where
-        T: HandlerArgument,
-    {
-        pub fn is_handler_argument(&self) -> True {
-            True
-        }
-    }
-
-    impl Else {
-        pub fn should_be_handler_argument(&self) -> bool {
-            false
-        }
-
-        pub fn get_handler_argument(&self) -> PhantomData<NotAnArgument> {
-            PhantomData
-        }
-
-        pub fn is_handler_argument(&self) -> False {
-            False
-        }
-    }
-
-    pub struct TraitProbe<T>(PhantomData<T>);
-
-    impl<T> TraitProbe<T> {
-        pub const fn new() -> Self {
-            Self(PhantomData)
-        }
-    }
-
-    pub struct Else;
-
-    impl<T> Deref for TraitProbe<T> {
-        type Target = Else;
-
-        fn deref(&self) -> &Self::Target {
-            static ELSE: Else = Else;
-            &ELSE
-        }
-    }
-
-    pub struct NotAnArgument;
-
-    impl ShouldBeHandlerArgument for NotAnArgument {}
-
-    impl HandlerArgument for NotAnArgument {}
-
-    pub struct True;
-    pub struct False;
-    pub trait Boolean {
-        const VALUE: bool;
-        fn value(&self) -> bool {
-            Self::VALUE
-        }
-    }
-    impl Boolean for True {
-        const VALUE: bool = true;
-    }
-    impl Boolean for False {
-        const VALUE: bool = false;
     }
 }

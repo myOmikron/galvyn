@@ -237,22 +237,20 @@ impl SwaggapiPage {
             SchemaGenerator::employ(&mut state.schemas, |gen| {
                 let mut parameters = Vec::new();
                 let mut request_body = Vec::new();
-                for arg in handler.handler_arguments {
-                    if let Some(arg) = arg.as_ref() {
-                        static PATH_PARAM_REGEX: LazyLock<Regex> =
-                            LazyLock::new(|| Regex::new(r"\{[^}]*}").unwrap());
-                        let path_params = PATH_PARAM_REGEX
-                            .find_iter(&handler.path)
-                            .map(|needle| &handler.path[(needle.start() + 1)..(needle.end() - 1)])
-                            .collect::<Vec<_>>();
+                for arg in &handler.handler_arguments {
+                    static PATH_PARAM_REGEX: LazyLock<Regex> =
+                        LazyLock::new(|| Regex::new(r"\{[^}]*}").unwrap());
+                    let path_params = PATH_PARAM_REGEX
+                        .find_iter(&handler.path)
+                        .map(|needle| &handler.path[(needle.start() + 1)..(needle.end() - 1)])
+                        .collect::<Vec<_>>();
 
-                        parameters.extend(
-                            (arg.parameters)(&mut *gen, &path_params)
-                                .into_iter()
-                                .map(ReferenceOr::Item),
-                        );
-                        request_body.extend((arg.request_body)(&mut *gen));
-                    }
+                    parameters.extend(
+                        (arg.parameters)(&mut *gen, &path_params)
+                            .into_iter()
+                            .map(ReferenceOr::Item),
+                    );
+                    request_body.extend((arg.request_body)(&mut *gen));
                 }
                 let responses = (handler.responses)(&mut *gen);
                 (parameters, request_body, responses)

@@ -46,5 +46,5 @@ pub struct HandlerMeta {
     pub responses: fn(&mut SchemaGenerator) -> Responses,
 
     /// The handler's arguments' [`HandlerArgument`](crate::handler_argument::HandlerArgument)'s methods
-    pub handler_arguments: &'static [Option<HandlerArgumentFns>],
+    pub handler_arguments: Vec<HandlerArgumentFns>,
 }

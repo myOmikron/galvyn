@@ -7,6 +7,7 @@ pub mod handler_argument;
 pub mod internals;
 mod page;
 mod router;
+pub mod type_metadata;
 pub mod utils;
 
 pub use self::page::SwaggapiPage;

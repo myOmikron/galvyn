@@ -9,6 +9,7 @@ use quote::format_ident;
 use quote::quote;
 use quote::quote_spanned;
 use quote::ToTokens;
+use syn::spanned::Spanned;
 use syn::FnArg;
 use syn::ItemFn;
 use syn::Meta;
@@ -81,14 +82,21 @@ pub fn handler(
     }
 
     let func_ident = &sig.ident;
-    let argument_type = sig
+    let handler_arguments = sig
         .inputs
         .iter()
         .filter_map(|arg| match arg {
             FnArg::Receiver(_) => None,
             FnArg::Typed(arg) => Some(&arg.ty),
         })
-        .collect::<Vec<_>>();
+        .map(|argument| {
+            quote_spanned! {argument.span()=>
+                ::galvyn::swaggapi::get_metadata!(
+                    ::galvyn::swaggapi::handler_argument::HandlerArgumentFns,
+                    #argument
+                )
+            }
+        });
     let return_type = match sig.output {
         ReturnType::Default => quote! { () },
         ReturnType::Type(_, return_type) => return_type.into_token_stream(),
@@ -124,21 +132,8 @@ pub fn handler(
     quote! {
         #[allow(non_camel_case_types)]
         #vis struct #func_ident;
-        impl ::galvyn::swaggapi::handler::Handler for #func_ident {
+        impl ::galvyn::swaggapi::handler::GalvynHandler for #func_ident {
             fn meta(&self) -> ::galvyn::swaggapi::handler::HandlerMeta {
-                const N: usize =  0 #(+ {let _ = stringify!(#argument_type); 1})*;
-                static FNS: [::std::option::Option<::galvyn::swaggapi::handler_argument::HandlerArgumentFns>; N] = [#(
-                    ::galvyn::swaggapi::handler_argument::macro_helper::get_handler_argument_fns(
-                        || ::galvyn::swaggapi::handler_argument::macro_helper::TraitProbe::<#argument_type>::new().get_handler_argument(),
-                        || ::galvyn::swaggapi::handler_argument::macro_helper::TraitProbe::<#argument_type>::new().is_handler_argument(),
-                    ),
-                )*];
-                const _: () = {#(
-                    ::galvyn::swaggapi::handler_argument::macro_helper::check_handler_argument(
-                        || ::galvyn::swaggapi::handler_argument::macro_helper::TraitProbe::<#argument_type>::new().get_handler_argument()
-                    );
-                )*};
-
                 ::galvyn::swaggapi::handler::HandlerMeta {
                     method: ::galvyn::swaggapi::re_exports::axum::http::method::Method::#method,
                     path: #path,
@@ -149,7 +144,13 @@ pub fn handler(
                     ident: #ident,
                     tags: &#tags,
                     responses: <#return_type as ::galvyn::swaggapi::as_responses::AsResponses>::responses,
-                    handler_arguments: &FNS,
+                    handler_arguments: {
+                        let mut x = ::std::vec::Vec::new();
+                        #(
+                            ::std::iter::Extend::extend(&mut x, #handler_arguments);
+                        )*
+                        x
+                    },
                 }
             }
             fn method_router(&self) -> ::galvyn::swaggapi::re_exports::axum::routing::MethodRouter {
