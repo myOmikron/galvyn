@@ -1,17 +1,10 @@
 use std::mem;
 
-use openapiv3::ObjectType;
-use openapiv3::ReferenceOr;
-use openapiv3::Schema;
-use openapiv3::SchemaData;
-use openapiv3::SchemaKind;
-use openapiv3::Type;
 use schemars::gen::SchemaGenerator as InnerGenerator;
 use schemars::gen::SchemaSettings;
+use schemars::schema::{ObjectValidation, Schema, SchemaObject};
 use schemars::JsonSchema;
 use schemars::Map;
-
-use crate::internals::convert_schema;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
@@ -33,8 +26,8 @@ impl SchemaGenerator {
     ///
     /// This might do nothing but return a reference to the schema
     /// already added to the generator previously.
-    pub fn generate<T: JsonSchema>(&mut self) -> ReferenceOr<Schema> {
-        convert_schema(self.0.subschema_for::<T>())
+    pub fn generate<T: JsonSchema>(&mut self) -> Schema {
+        self.0.subschema_for::<T>()
     }
 
     /// Generate an openapi schema for the type `T`
@@ -45,15 +38,8 @@ impl SchemaGenerator {
     /// This depends on the implementor of `JsonSchema` for `T` to follow the behavior
     /// outlined in `JsonSchema`'s docs.
     /// Namely, [`JsonSchema::json_schema`] **should not** return a `$ref` schema.
-    ///
-    /// Returns `Err`, if `T::json_schema` does not uphold this behaviour.
-    /// The `String` in the `Err` will be the reference which should not have been returned.
-    pub fn generate_refless<T: JsonSchema>(&mut self) -> Result<Schema, String> {
-        let schema = convert_schema(T::json_schema(&mut self.0));
-        match schema {
-            ReferenceOr::Item(schema) => Ok(schema),
-            ReferenceOr::Reference { reference } => Err(reference),
-        }
+    pub fn generate_refless<T: JsonSchema>(&mut self) -> Schema {
+        T::json_schema(&mut self.0)
     }
 
     /// Generate an openapi schema of `"type": "object"`
@@ -61,10 +47,13 @@ impl SchemaGenerator {
     /// Returns `None` if `T` produced a schema of another type.
     ///
     /// This convenience method is used when `T` describes parameters for a handler and not a body.
-    pub fn generate_object<T: JsonSchema>(&mut self) -> Option<(ObjectType, SchemaData)> {
-        let schema = self.generate_refless::<T>().ok()?;
-        match schema.schema_kind {
-            SchemaKind::Type(Type::Object(obj)) => Some((obj, schema.schema_data)),
+    pub fn generate_object<T: JsonSchema>(&mut self) -> Option<Box<ObjectValidation>> {
+        let schema = self.generate_refless::<T>();
+        match schema {
+            Schema::Object(SchemaObject {
+                object: Some(object),
+                ..
+            }) => Some(object),
             _ => None,
         }
     }
@@ -85,7 +74,7 @@ impl SchemaGenerator {
     /// This requires some cleanup which is guaranteed by running a `FnOnce`
     /// instead of giving ownership of `SchemaGenerator` directly.
     pub fn employ<T>(
-        definitions: &mut Map<String, schemars::schema::Schema>,
+        definitions: &mut Map<String, Schema>,
         func: impl FnOnce(&mut Self) -> T,
     ) -> T {
         // Construct new empty generator

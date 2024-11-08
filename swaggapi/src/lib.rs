@@ -1,17 +1,16 @@
 // #![warn(missing_docs)]
 // #![warn(clippy::todo)]
 
-pub mod as_responses;
 pub mod handler;
-pub mod handler_argument;
-pub mod internals;
-mod page;
+// pub mod internals;
+// mod page;
 mod router;
+pub mod schema_generator;
 pub mod type_metadata;
 pub mod utils;
 
-pub use self::page::SwaggapiPage;
-pub use self::page::PAGE_OF_EVERYTHING;
+// pub use self::page::SwaggapiPage;
+// pub use self::page::PAGE_OF_EVERYTHING;
 pub use self::router::GalvynRouter;
 
 /// Reexports for macros and implementors

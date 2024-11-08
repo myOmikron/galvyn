@@ -1,8 +1,15 @@
-use crate::handler_argument::HandlerArgumentFns;
-use crate::internals::SchemaGenerator;
+use self::request_body::RequestBodyMetadata;
+use self::request_part::RequestPartMetadata;
+use self::response_body::ResponseBodyMetadata;
+use self::response_part::ResponsePartMetadata;
 use axum::http::Method;
 use axum::routing::MethodRouter;
-use openapiv3::Responses;
+
+mod impls;
+pub mod request_body;
+pub mod request_part;
+pub mod response_body;
+pub mod response_part;
 
 /// A function handling a web request
 ///
@@ -42,9 +49,11 @@ pub struct HandlerMeta {
     /// Tags set through `#[operation(..., tags(...))]`
     pub tags: &'static [&'static str],
 
-    /// The handler's return type's [`AsResponses::responses`](crate::as_responses::AsResponses::responses)
-    pub responses: fn(&mut SchemaGenerator) -> Responses,
+    pub request_parts: Vec<RequestPartMetadata>,
 
-    /// The handler's arguments' [`HandlerArgument`](crate::handler_argument::HandlerArgument)'s methods
-    pub handler_arguments: Vec<HandlerArgumentFns>,
+    pub request_body: Option<RequestBodyMetadata>,
+
+    pub response_parts: Vec<ResponsePartMetadata>,
+
+    pub response_body: Option<ResponseBodyMetadata>,
 }

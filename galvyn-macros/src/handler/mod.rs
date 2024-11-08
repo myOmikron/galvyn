@@ -8,13 +8,12 @@ use proc_macro2::TokenTree;
 use quote::format_ident;
 use quote::quote;
 use quote::quote_spanned;
-use quote::ToTokens;
 use syn::spanned::Spanned;
-use syn::FnArg;
 use syn::ItemFn;
 use syn::Meta;
 use syn::MetaNameValue;
 use syn::ReturnType;
+use syn::{FnArg, Type};
 
 mod parse;
 
@@ -82,24 +81,62 @@ pub fn handler(
     }
 
     let func_ident = &sig.ident;
-    let handler_arguments = sig
+
+    let request_types = sig
         .inputs
         .iter()
         .filter_map(|arg| match arg {
             FnArg::Receiver(_) => None,
             FnArg::Typed(arg) => Some(&arg.ty),
         })
-        .map(|argument| {
-            quote_spanned! {argument.span()=>
-                ::galvyn::swaggapi::get_metadata!(
-                    ::galvyn::swaggapi::handler_argument::HandlerArgumentFns,
-                    #argument
-                )
-            }
-        });
-    let return_type = match sig.output {
-        ReturnType::Default => quote! { () },
-        ReturnType::Type(_, return_type) => return_type.into_token_stream(),
+        .collect::<Vec<_>>();
+
+    let request_parts = request_types.iter().map(|part| {
+        quote_spanned! {part.span()=>
+            ::galvyn::swaggapi::get_metadata!(
+                ::galvyn::swaggapi::handler::request_part::RequestPartMetadata,
+                #part
+            )
+        }
+    });
+
+    let request_body = if let Some(body) = request_types.last() {
+        quote_spanned! {body.span()=>
+            ::galvyn::swaggapi::get_metadata!(
+                ::galvyn::swaggapi::handler::request_body::RequestBodyMetadata,
+                #body
+            )
+        }
+    } else {
+        quote! { None }
+    };
+
+    let response_types = match sig.output {
+        ReturnType::Default => Vec::new(),
+        ReturnType::Type(_, return_type) => match *return_type {
+            Type::Tuple(tuple) => tuple.elems.into_iter().collect(),
+            return_type => vec![return_type],
+        },
+    };
+
+    let response_parts = response_types.iter().map(|part| {
+        quote_spanned! {part.span()=>
+            ::galvyn::swaggapi::get_metadata!(
+                ::galvyn::swaggapi::handler::response_part::ResponsePartMetadata,
+                #part
+            )
+        }
+    });
+
+    let response_body = if let Some(body) = response_types.last() {
+        quote_spanned! {body.span()=>
+            ::galvyn::swaggapi::get_metadata!(
+                ::galvyn::swaggapi::handler::response_body::ResponseBodyMetadata,
+                #body
+            )
+        }
+    } else {
+        quote! { None }
     };
 
     let ident = Literal::string(&sig.ident.to_string());
@@ -143,14 +180,22 @@ pub fn handler(
                     )*],
                     ident: #ident,
                     tags: &#tags,
-                    responses: <#return_type as ::galvyn::swaggapi::as_responses::AsResponses>::responses,
-                    handler_arguments: {
+                    request_parts: {
                         let mut x = ::std::vec::Vec::new();
                         #(
-                            ::std::iter::Extend::extend(&mut x, #handler_arguments);
+                            ::std::iter::Extend::extend(&mut x, #request_parts);
                         )*
                         x
                     },
+                    request_body: #request_body,
+                    response_parts: {
+                        let mut x = ::std::vec::Vec::new();
+                        #(
+                            ::std::iter::Extend::extend(&mut x, #response_parts);
+                        )*
+                        x
+                    },
+                    response_body: #response_body,
                 }
             }
             fn method_router(&self) -> ::galvyn::swaggapi::re_exports::axum::routing::MethodRouter {
