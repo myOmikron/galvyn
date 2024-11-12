@@ -7,7 +7,7 @@ use axum::body::Bytes;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::RawForm;
-use axum::http::StatusCode;
+use axum::http::{header, HeaderName, StatusCode};
 use axum::response::{Html, Redirect};
 use axum::Form;
 use axum::Json;
@@ -281,6 +281,10 @@ where
 
 impl ShouldBeResponseBody for Redirect {}
 impl ResponseBody for Redirect {
+    fn header() -> Vec<HeaderName> {
+        vec![header::LOCATION]
+    }
+
     fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
         vec![
             (StatusCode::SEE_OTHER, None),

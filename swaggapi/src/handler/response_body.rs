@@ -1,12 +1,15 @@
 use crate::handler::response_part::{ResponsePart, ShouldBeResponsePart};
 use crate::schema_generator::SchemaGenerator;
 use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
-use axum::http::StatusCode;
+use axum::http::{HeaderName, StatusCode};
 use mime::Mime;
 use schemars::schema::Schema;
 
 /// Describes the behaviour of a type implementing [`IntoResponse`](axum::response::IntoResponse)
 pub trait ResponseBody: ShouldBeResponseBody {
+    fn header() -> Vec<HeaderName> {
+        vec![]
+    }
     fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
 }
 
@@ -25,4 +28,8 @@ impl<T: ResponseBody> HasMetadata<ResponseBodyMetadata> for T {
 }
 
 impl<T: ShouldBeResponseBody> ShouldBeResponsePart for T {}
-impl<T: ResponseBody> ResponsePart for T {}
+impl<T: ResponseBody> ResponsePart for T {
+    fn header() -> Vec<HeaderName> {
+        <T as ResponseBody>::header()
+    }
+}
