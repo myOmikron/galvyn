@@ -1,4 +1,4 @@
-use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
+use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 
 /// Describes the behaviour of a type implementing [`FromRequestParts`](axum::extract::FromRequestParts)
 pub trait RequestPart: ShouldBeRequestPart {}

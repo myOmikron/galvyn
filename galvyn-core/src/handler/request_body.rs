@@ -1,6 +1,6 @@
 use crate::handler::request_part::{RequestPart, ShouldBeRequestPart};
+use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use crate::schema_generator::SchemaGenerator;
-use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use mime::Mime;
 use schemars::schema::Schema;
 

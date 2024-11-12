@@ -1,6 +1,6 @@
 use crate::handler::response_part::{ResponsePart, ShouldBeResponsePart};
+use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use crate::schema_generator::SchemaGenerator;
-use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use axum::http::{HeaderName, StatusCode};
 use mime::Mime;
 use schemars::schema::Schema;

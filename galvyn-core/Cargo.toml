@@ -9,3 +9,9 @@ description = "Core concepts for galvyn like trait definitions"
 [dependencies]
 # Webserver
 axum = { version = "~0.7", default-features = false }
+bytes = { version = "~1" }
+mime = { version = "~0.3" }
+serde = { version = "~1" }
+schemars = { version = "~0.8" }
+tower = { version = "~0.4" }
+regex = { version = "~1" }

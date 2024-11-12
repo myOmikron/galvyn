@@ -2,7 +2,7 @@ use self::request_body::RequestBodyMetadata;
 use self::request_part::RequestPartMetadata;
 use self::response_body::ResponseBodyMetadata;
 use self::response_part::ResponsePartMetadata;
-use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
+use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use axum::http::response::Parts;
 use axum::http::{Method, Response, StatusCode};
 use axum::routing::MethodRouter;

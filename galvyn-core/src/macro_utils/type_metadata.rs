@@ -10,7 +10,7 @@ pub trait ShouldHaveMetadata<M> {}
 #[macro_export]
 macro_rules! get_metadata {
     ($M:ty, $T:ty) => {{
-        $crate::type_metadata::If::<$M, $T>::new().get_metadata()
+        $crate::macro_utils::type_metadata::If::<$M, $T>::new().get_metadata()
     }};
 }
 pub use crate::get_metadata;

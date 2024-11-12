@@ -93,8 +93,8 @@ pub fn handler(
 
     let request_parts = request_types.iter().map(|part| {
         quote_spanned! {part.span()=>
-            ::galvyn::swaggapi::get_metadata!(
-                ::galvyn::swaggapi::handler::request_part::RequestPartMetadata,
+            ::galvyn::core::get_metadata!(
+                ::galvyn::core::handler::request_part::RequestPartMetadata,
                 #part
             )
         }
@@ -102,8 +102,8 @@ pub fn handler(
 
     let request_body = if let Some(body) = request_types.last() {
         quote_spanned! {body.span()=>
-            ::galvyn::swaggapi::get_metadata!(
-                ::galvyn::swaggapi::handler::request_body::RequestBodyMetadata,
+            ::galvyn::core::get_metadata!(
+                ::galvyn::core::handler::request_body::RequestBodyMetadata,
                 #body
             )
         }
@@ -121,8 +121,8 @@ pub fn handler(
 
     let response_modifier = if let Some(body) = response_types.first() {
         quote_spanned! {body.span()=>
-            ::galvyn::swaggapi::get_metadata!(
-                ::galvyn::swaggapi::handler::ResponseModifier,
+            ::galvyn::core::get_metadata!(
+                ::galvyn::core::handler::ResponseModifier,
                 #body
             )
         }
@@ -132,8 +132,8 @@ pub fn handler(
 
     let response_parts = response_types.iter().map(|part| {
         quote_spanned! {part.span()=>
-            ::galvyn::swaggapi::get_metadata!(
-                ::galvyn::swaggapi::handler::response_part::ResponsePartMetadata,
+            ::galvyn::core::get_metadata!(
+                ::galvyn::core::handler::response_part::ResponsePartMetadata,
                 #part
             )
         }
@@ -141,8 +141,8 @@ pub fn handler(
 
     let response_body = if let Some(body) = response_types.last() {
         quote_spanned! {body.span()=>
-            ::galvyn::swaggapi::get_metadata!(
-                ::galvyn::swaggapi::handler::response_body::ResponseBodyMetadata,
+            ::galvyn::core::get_metadata!(
+                ::galvyn::core::handler::response_body::ResponseBodyMetadata,
                 #body
             )
         }
@@ -180,10 +180,10 @@ pub fn handler(
     quote! {
         #[allow(non_camel_case_types)]
         #vis struct #func_ident;
-        impl ::galvyn::swaggapi::handler::GalvynHandler for #func_ident {
-            fn meta(&self) -> ::galvyn::swaggapi::handler::HandlerMeta {
-                ::galvyn::swaggapi::handler::HandlerMeta {
-                    method: ::galvyn::swaggapi::re_exports::axum::http::method::Method::#method,
+        impl ::galvyn::core::handler::GalvynHandler for #func_ident {
+            fn meta(&self) -> ::galvyn::core::handler::HandlerMeta {
+                ::galvyn::core::handler::HandlerMeta {
+                    method: ::galvyn::core::re_exports::axum::http::method::Method::#method,
                     path: #path,
                     deprecated: #deprecated,
                     doc: &[#(
@@ -210,11 +210,11 @@ pub fn handler(
                     response_body: #response_body,
                 }
             }
-            fn method_router(&self) -> ::galvyn::swaggapi::re_exports::axum::routing::MethodRouter {
+            fn method_router(&self) -> ::galvyn::core::re_exports::axum::routing::MethodRouter {
                 #tokens
 
-                ::galvyn::swaggapi::re_exports::axum::routing::MethodRouter::new()
-                    .on(::galvyn::swaggapi::re_exports::axum::routing::MethodFilter::#method, #func_ident)
+                ::galvyn::core::re_exports::axum::routing::MethodRouter::new()
+                    .on(::galvyn::core::re_exports::axum::routing::MethodFilter::#method, #func_ident)
             }
         }
     }

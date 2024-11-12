@@ -1,4 +1,4 @@
-use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
+use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use axum::http::HeaderName;
 
 /// Describes the behaviour of a type implementing [`IntoResponseParts`](axum::response::IntoResponseParts)

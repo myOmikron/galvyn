@@ -2,7 +2,6 @@ use super::request_body::{RequestBody, ShouldBeRequestBody};
 use super::request_part::{RequestPart, ShouldBeRequestPart};
 use crate::handler::response_body::{ResponseBody, ShouldBeResponseBody};
 use crate::schema_generator::SchemaGenerator;
-use crate::utils::SchemalessJson;
 use axum::body::Bytes;
 use axum::extract::Path;
 use axum::extract::Query;
@@ -38,13 +37,6 @@ impl<T> ShouldBeRequestBody for Json<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestBody for Json<T> {
     fn body(gen: &mut SchemaGenerator) -> (Mime, Option<Schema>) {
         (mime::APPLICATION_JSON, Some(gen.generate::<T>()))
-    }
-}
-
-impl<T> ShouldBeRequestBody for SchemalessJson<T> {}
-impl<T: DeserializeOwned> RequestBody for SchemalessJson<T> {
-    fn body(_gen: &mut SchemaGenerator) -> (Mime, Option<Schema>) {
-        (mime::APPLICATION_JSON, None)
     }
 }
 
@@ -249,13 +241,6 @@ impl<T: Serialize + JsonSchema> ResponseBody for Json<T> {
             StatusCode::OK,
             Some((mime::APPLICATION_JSON, Some(_gen.generate::<T>()))),
         )]
-    }
-}
-
-impl<T> ShouldBeResponseBody for SchemalessJson<T> {}
-impl<T: Serialize> ResponseBody for SchemalessJson<T> {
-    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
-        vec![(StatusCode::OK, None)]
     }
 }
 
