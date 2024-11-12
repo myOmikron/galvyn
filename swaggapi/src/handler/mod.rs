@@ -2,7 +2,9 @@ use self::request_body::RequestBodyMetadata;
 use self::request_part::RequestPartMetadata;
 use self::response_body::ResponseBodyMetadata;
 use self::response_part::ResponsePartMetadata;
-use axum::http::Method;
+use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
+use axum::http::response::Parts;
+use axum::http::{Method, Response, StatusCode};
 use axum::routing::MethodRouter;
 
 mod impls;
@@ -53,7 +55,34 @@ pub struct HandlerMeta {
 
     pub request_body: Option<RequestBodyMetadata>,
 
+    pub response_modifier: Option<ResponseModifier>,
+
     pub response_parts: Vec<ResponsePartMetadata>,
 
     pub response_body: Option<ResponseBodyMetadata>,
+}
+
+#[derive(Clone, Debug)]
+pub enum ResponseModifier {
+    StatusCode,
+    Parts,
+    Response,
+}
+
+impl<T: HasMetadata<ResponseModifier>> ShouldHaveMetadata<ResponseModifier> for T {}
+impl HasMetadata<ResponseModifier> for StatusCode {
+    fn metadata() -> ResponseModifier {
+        ResponseModifier::StatusCode
+    }
+}
+impl HasMetadata<ResponseModifier> for Parts {
+    fn metadata() -> ResponseModifier {
+        ResponseModifier::StatusCode
+    }
+}
+
+impl HasMetadata<ResponseModifier> for Response<()> {
+    fn metadata() -> ResponseModifier {
+        ResponseModifier::StatusCode
+    }
 }

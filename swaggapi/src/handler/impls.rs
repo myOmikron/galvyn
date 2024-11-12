@@ -7,6 +7,7 @@ use axum::body::Bytes;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::RawForm;
+use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
 use axum::Form;
 use axum::Json;
@@ -159,121 +160,110 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Query<T> {
 
 impl ShouldBeResponseBody for &'static str {}
 impl ResponseBody for &'static str {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_text()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::TEXT_PLAIN_UTF_8, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for String {}
 impl ResponseBody for String {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_text()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::TEXT_PLAIN_UTF_8, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Box<str> {}
 impl ResponseBody for Box<str> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_text()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::TEXT_PLAIN_UTF_8, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Cow<'static, str> {}
 impl ResponseBody for Cow<'static, str> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_text()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::TEXT_PLAIN_UTF_8, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for &'static [u8] {}
 impl ResponseBody for &'static [u8] {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl<const N: usize> ShouldBeResponseBody for &'static [u8; N] {}
 impl<const N: usize> ResponseBody for &'static [u8; N] {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl<const N: usize> ShouldBeResponseBody for [u8; N] {}
 impl<const N: usize> ResponseBody for [u8; N] {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Vec<u8> {}
 impl ResponseBody for Vec<u8> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Box<[u8]> {}
 impl ResponseBody for Box<[u8]> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Bytes {}
 impl ResponseBody for Bytes {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for BytesMut {}
 impl ResponseBody for BytesMut {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl ShouldBeResponseBody for Cow<'static, [u8]> {}
 impl ResponseBody for Cow<'static, [u8]> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl<T> ShouldBeResponseBody for Json<T> {}
 impl<T: Serialize + JsonSchema> ResponseBody for Json<T> {
-    // fn responses(gen: &mut SchemaGenerator) -> Responses {
-    //     ok_json::<T>(gen)
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(
+            StatusCode::OK,
+            Some((mime::APPLICATION_JSON, Some(_gen.generate::<T>()))),
+        )]
+    }
 }
 
 impl<T> ShouldBeResponseBody for SchemalessJson<T> {}
 impl<T: Serialize> ResponseBody for SchemalessJson<T> {
-    // fn responses(_: &mut SchemaGenerator) -> Responses {
-    //     simple_responses([
-    //         SimpleResponse {
-    //             status_code: StatusCode::Code(200),
-    //             mime_type: mime::APPLICATION_JSON,
-    //             description: "Some json data".to_string(),
-    //             media_type: Some(MediaType {
-    //                 schema: Some(ReferenceOr::Item(Schema {
-    //                     schema_data: Default::default(),
-    //                     schema_kind: SchemaKind::Any(Default::default()),
-    //                 })),
-    //                 ..Default::default()
-    //             }),
-    //         },
-    //         // TODO add error
-    //     ])
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, None)]
+    }
 }
 
 impl ShouldBeResponseBody for () {}
 impl ResponseBody for () {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_empty()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, None)]
+    }
 }
 
 impl<T, E> ShouldBeResponseBody for Result<T, E> {}
@@ -282,24 +272,22 @@ where
     T: ResponseBody,
     E: ResponseBody,
 {
-    // fn responses(gen: &mut SchemaGenerator) -> Responses {
-    //     let mut res = E::responses(gen);
-    //     let ok_res = T::responses(gen);
-    //
-    //     // As we want to preserve in almost any cases the Ok branch of the result, we're extending
-    //     // the IndexMaps of the error-branch with those of the ok-branch
-    //     res.responses.extend(ok_res.responses);
-    //     res.extensions.extend(ok_res.extensions);
-    //     if ok_res.default.is_some() {
-    //         res.default = ok_res.default;
-    //     }
-    //
-    //     res
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        let mut bodies = T::body(&mut *_gen);
+        bodies.extend(E::body(&mut *_gen));
+        bodies
+    }
 }
 
 impl ShouldBeResponseBody for Redirect {}
 impl ResponseBody for Redirect {
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![
+            (StatusCode::SEE_OTHER, None),
+            (StatusCode::TEMPORARY_REDIRECT, None),
+            (StatusCode::PERMANENT_REDIRECT, None),
+        ]
+    }
     // fn responses(gen: &mut SchemaGenerator) -> Responses {
     //     Responses {
     //         responses: IndexMap::from_iter([(
@@ -338,14 +326,14 @@ where
     T: Buf + Unpin + Send + 'static,
     U: Buf + Unpin + Send + 'static,
 {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_binary()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::APPLICATION_OCTET_STREAM, None)))]
+    }
 }
 
 impl<T> ShouldBeResponseBody for Html<T> {}
 impl<T> ResponseBody for Html<T> {
-    // fn responses(_gen: &mut SchemaGenerator) -> Responses {
-    //     ok_html()
-    // }
+    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        vec![(StatusCode::OK, Some((mime::TEXT_HTML_UTF_8, None)))]
+    }
 }
