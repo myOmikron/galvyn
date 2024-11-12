@@ -1,3 +1,4 @@
+use crate::handler::response_part::{ResponsePart, ShouldBeResponsePart};
 use crate::schema_generator::SchemaGenerator;
 use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use axum::http::StatusCode;
@@ -22,3 +23,6 @@ impl<T: ResponseBody> HasMetadata<ResponseBodyMetadata> for T {
         ResponseBodyMetadata { body: T::body }
     }
 }
+
+impl<T: ShouldBeResponseBody> ShouldBeResponsePart for T {}
+impl<T: ResponseBody> ResponsePart for T {}

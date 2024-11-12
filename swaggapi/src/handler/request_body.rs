@@ -1,3 +1,4 @@
+use crate::handler::request_part::{RequestPart, ShouldBeRequestPart};
 use crate::schema_generator::SchemaGenerator;
 use crate::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use mime::Mime;
@@ -21,3 +22,6 @@ impl<T: RequestBody> HasMetadata<RequestBodyMetadata> for T {
         RequestBodyMetadata { body: T::body }
     }
 }
+
+impl<T: ShouldBeRequestBody> ShouldBeRequestPart for T {}
+impl<T: RequestBody> RequestPart for T {}
