@@ -1,0 +1,43 @@
+[package]
+name = "galvyn-contrib-auth"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+description = "Authentication methods for galvyn"
+
+[dependencies]
+# Core component
+galvyn-core = { version = "*", path = "../../galvyn-core" }
+
+# oidc
+openidconnect = { version = "~3", features = ["accept-rfc3339-timestamps"] }
+
+# password hashing
+argon2 = { version = "~0.5", features = ["std"] }
+# totp
+totp-rs = { version = "~5" }
+# webauthn
+# The feature is necessary as we want to save the state to a database
+webauthn-rs = { version = "~0.5", features = ["danger-allow-state-serialisation"] }
+
+# Serialization support
+serde = { version = "~1", features = ["derive"] }
+
+[features]
+full = [
+    "oidc",
+    "local-full"
+]
+
+oidc = []
+local-full = [
+    "local-password",
+    "local-totp",
+    "local-passkey"
+]
+
+local-totp = ["local-password"]
+local-password = ["__local-user"]
+local-passkey = ["__local-user"]
+
+__local-user = []
