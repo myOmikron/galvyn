@@ -9,24 +9,19 @@ use crate::output::print_stacktrace;
 
 pub mod cli;
 pub mod commands;
-mod output;
+pub mod output;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    match cli.command {
-        Command::Init { name, path } => {
-            if let Err(err) = commands::run_init(name, path) {
-                print_stacktrace(err);
-                exit(1);
-            }
-        }
-        Command::Module { name, path } => {
-            if let Err(err) = commands::run_module(name, path) {
-                print_stacktrace(err);
-                exit(1);
-            }
-        }
+    let res = match cli.command {
+        Command::Init { name, path } => commands::run_init(name, path),
+        Command::Module { name, path } => commands::run_module(name, path),
+    };
+
+    if let Err(err) = res {
+        print_stacktrace(err);
+        exit(1);
     }
 
     Ok(())
