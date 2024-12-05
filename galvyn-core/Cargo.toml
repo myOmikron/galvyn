@@ -19,6 +19,9 @@ tracing = { version = "~0.1" }
 thiserror = "~2"
 rorm = { version = "~0.6", default-features = false, features = ["postgres-only"] }
 
+# TODO: maybe roll our own?
+envy = { version = "~0.4" }
+
 # ----- #
 # Async #
 # ----- #
