@@ -9,6 +9,9 @@ description = "Authentication methods for galvyn"
 # Core component
 galvyn-core = { version = "*", path = "../../galvyn-core" }
 
+# TODO: maybe roll our own?
+envy = { version = "~0.4" }
+
 # oidc
 openidconnect = { version = "~3", features = ["accept-rfc3339-timestamps"] }
 
