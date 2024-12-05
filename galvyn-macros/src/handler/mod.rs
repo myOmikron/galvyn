@@ -1,7 +1,6 @@
 use proc_macro2::Delimiter;
 use proc_macro2::Group;
 use proc_macro2::Ident;
-use proc_macro2::Literal;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
