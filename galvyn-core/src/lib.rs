@@ -12,3 +12,4 @@ pub mod macro_utils;
 mod module;
 mod router;
 pub mod schema_generator;
+pub mod stuff;

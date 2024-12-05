@@ -9,6 +9,10 @@ description = "Authentication methods for galvyn"
 # Core component
 galvyn-core = { version = "*", path = "../../galvyn-core" }
 
+rorm = { version = "~0.6", default-features = false }
+
+uuid = { version = "~1" }
+
 # oidc
 openidconnect = { version = "~3", features = ["accept-rfc3339-timestamps"] }
 
