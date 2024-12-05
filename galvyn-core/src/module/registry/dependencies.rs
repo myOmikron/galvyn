@@ -4,6 +4,7 @@ use crate::module::registry::builder::RegistryBuilder;
 use crate::module::registry::module_set::OwnedModulesSet;
 use crate::module::Module;
 use crate::util_macros::impl_tuples;
+use std::any::type_name;
 
 /// A tuple of [`Module`]s which need to be initialized before another one which depends on them.
 pub trait ModuleDependencies: Sized + Send + Sync + 'static {
@@ -26,7 +27,9 @@ macro_rules! impl_module_dependencies {
 
             fn take(modules: &mut OwnedModulesSet) -> Self {
                 ($(
-                    *modules.remove::<$T>().unwrap(),
+                    *modules.remove::<$T>().unwrap_or_else(
+                        || panic!("Module {} has not been initialised yet", type_name::<$T>())
+                    ),
                 )+)
             }
 

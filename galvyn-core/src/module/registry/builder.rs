@@ -5,12 +5,13 @@ use crate::module::registry::{DynModule, Registry};
 use crate::module::Module;
 use futures_concurrency::future::Join;
 use futures_lite::future;
-use std::any::TypeId;
+use std::any::{type_name, TypeId};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use tokio::task::{JoinError, JoinHandle};
+use tracing::{debug, debug_span, instrument, trace, trace_span, Instrument};
 
 #[derive(Default)]
 pub struct RegistryBuilder {
@@ -26,16 +27,47 @@ impl RegistryBuilder {
     /// Adds a new module to the `RegistryBuilder`
     ///
     /// Calling this method twice with the same `T` is not an error but will only add it once.
+    #[instrument(level = "trace", name = "RegistryBuilder::register_module", skip(self), fields(module.name = type_name::<T>()))]
     pub fn register_module<T: Module>(&mut self) -> &mut Self {
         if let Entry::Vacant(entry) = self.modules.entry(TypeId::of::<T>()) {
             entry.insert(Box::new(|| {
                 tokio::spawn(async {
-                    let pre_init = T::pre_init().await?;
+                    let pre_init = async move {
+                        let result = T::pre_init().await;
+                        match &result {
+                            Ok(_) => trace!("Finished pre init"),
+                            Err(_) => trace!("Failed pre init"),
+                        }
+                        result
+                    }
+                    .instrument(trace_span!(
+                        "Module::pre_init",
+                        module.name = type_name::<T>()
+                    ))
+                    .await?;
+
                     Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
                         Box::pin(async move {
                             let mut dependencies =
                                 <T::Dependencies as ModuleDependencies>::take(&mut modules);
-                            let t = T::init(pre_init, &mut dependencies).await?;
+
+                            let t = {
+                                let dependencies = &mut dependencies;
+                                async move {
+                                    let result = T::init(pre_init, dependencies).await;
+                                    match &result {
+                                        Ok(_) => trace!("Finished init"),
+                                        Err(_) => trace!("Failed init"),
+                                    }
+                                    result
+                                }
+                                .instrument(trace_span!(
+                                    "Module::init",
+                                    module.name = type_name::<T>()
+                                ))
+                                .await?
+                            };
+
                             <T::Dependencies as ModuleDependencies>::put_back(
                                 dependencies,
                                 &mut modules,
@@ -46,7 +78,11 @@ impl RegistryBuilder {
                     }))
                 })
             }) as UninitModule);
+            debug!(module.name = type_name::<T>(), "Registered module");
+
             <T::Dependencies as ModuleDependencies>::register(self);
+        } else {
+            debug!(module.name = type_name::<T>(), "Module already registered");
         }
         self
     }
@@ -54,6 +90,7 @@ impl RegistryBuilder {
     /// Initialized all registered modules
     ///
     /// and makes the registry available through [`Registry::global`].
+    #[instrument(level = "trace", name = "RegistryBuilder::init", skip(self))]
     pub async fn init(&mut self) -> Result<(), InitError> {
         let pre_init_modules = process_join_results(
             self.modules
@@ -126,7 +163,20 @@ type PreInitModule =
 
 impl<M: Module> DynModule for M {
     fn post_init(&'static self) -> JoinHandle<Result<(), module::PostInitError>> {
-        tokio::spawn(Module::post_init(self))
+        tokio::spawn(
+            async move {
+                let result = Module::post_init(self).await;
+                match &result {
+                    Ok(_) => trace!("Finished post init"),
+                    Err(_) => trace!("Failed post init"),
+                }
+                result
+            }
+            .instrument(trace_span!(
+                "Module::post_init",
+                module.name = type_name::<Self>()
+            )),
+        )
     }
 }
 
