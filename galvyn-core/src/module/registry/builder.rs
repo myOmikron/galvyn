@@ -15,7 +15,7 @@ use tracing::{debug, debug_span, instrument, trace, trace_span, Instrument};
 
 #[derive(Default)]
 pub struct RegistryBuilder {
-    modules: HashMap<TypeId, UninitModule>,
+    modules: Vec<(TypeId, UninitModule)>,
 }
 
 impl RegistryBuilder {
@@ -29,55 +29,63 @@ impl RegistryBuilder {
     /// Calling this method twice with the same `T` is not an error but will only add it once.
     #[instrument(level = "trace", name = "RegistryBuilder::register_module", skip(self), fields(module.name = type_name::<T>()))]
     pub fn register_module<T: Module>(&mut self) -> &mut Self {
-        if let Entry::Vacant(entry) = self.modules.entry(TypeId::of::<T>()) {
-            entry.insert(Box::new(|| {
-                tokio::spawn(async {
-                    let pre_init = async move {
-                        let result = T::pre_init().await;
-                        match &result {
-                            Ok(_) => trace!("Finished pre init"),
-                            Err(_) => trace!("Failed pre init"),
+        if self
+            .modules
+            .iter()
+            .find(|(id, _)| *id == TypeId::of::<T>())
+            .is_none()
+        {
+            self.modules.push((
+                TypeId::of::<T>(),
+                Box::new(|| {
+                    tokio::spawn(async {
+                        let pre_init = async move {
+                            let result = T::pre_init().await;
+                            match &result {
+                                Ok(_) => trace!("Finished pre init"),
+                                Err(_) => trace!("Failed pre init"),
+                            }
+                            result
                         }
-                        result
-                    }
-                    .instrument(trace_span!(
-                        "Module::pre_init",
-                        module.name = type_name::<T>()
-                    ))
-                    .await?;
+                        .instrument(trace_span!(
+                            "Module::pre_init",
+                            module.name = type_name::<T>()
+                        ))
+                        .await?;
 
-                    Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
-                        Box::pin(async move {
-                            let mut dependencies =
-                                <T::Dependencies as ModuleDependencies>::take(&mut modules);
+                        Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
+                            Box::pin(async move {
+                                let mut dependencies =
+                                    <T::Dependencies as ModuleDependencies>::take(&mut modules);
 
-                            let t = {
-                                let dependencies = &mut dependencies;
-                                async move {
-                                    let result = T::init(pre_init, dependencies).await;
-                                    match &result {
-                                        Ok(_) => trace!("Finished init"),
-                                        Err(_) => trace!("Failed init"),
+                                let t = {
+                                    let dependencies = &mut dependencies;
+                                    async move {
+                                        let result = T::init(pre_init, dependencies).await;
+                                        match &result {
+                                            Ok(_) => trace!("Finished init"),
+                                            Err(_) => trace!("Failed init"),
+                                        }
+                                        result
                                     }
-                                    result
-                                }
-                                .instrument(trace_span!(
-                                    "Module::init",
-                                    module.name = type_name::<T>()
-                                ))
-                                .await?
-                            };
+                                    .instrument(trace_span!(
+                                        "Module::init",
+                                        module.name = type_name::<T>()
+                                    ))
+                                    .await?
+                                };
 
-                            <T::Dependencies as ModuleDependencies>::put_back(
-                                dependencies,
-                                &mut modules,
-                            );
-                            modules.insert(t);
-                            Ok(modules)
-                        }) as future::Boxed<_>
-                    }))
-                })
-            }) as UninitModule);
+                                <T::Dependencies as ModuleDependencies>::put_back(
+                                    dependencies,
+                                    &mut modules,
+                                );
+                                modules.insert(t);
+                                Ok(modules)
+                            }) as future::Boxed<_>
+                        }))
+                    })
+                }) as UninitModule,
+            ));
             debug!(module.name = type_name::<T>(), "Registered module");
 
             <T::Dependencies as ModuleDependencies>::register(self);
@@ -94,7 +102,8 @@ impl RegistryBuilder {
     pub async fn init(&mut self) -> Result<(), InitError> {
         let pre_init_modules = process_join_results(
             self.modules
-                .drain()
+                .drain(..)
+                .rev()
                 .map(|(_, x)| x())
                 .collect::<Vec<_>>()
                 .join()
