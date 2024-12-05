@@ -1,6 +1,6 @@
 use crate::module::registry::DynModule;
 use crate::module::Module;
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 

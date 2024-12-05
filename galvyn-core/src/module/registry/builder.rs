@@ -6,12 +6,10 @@ use crate::module::Module;
 use futures_concurrency::future::Join;
 use futures_lite::future;
 use std::any::{type_name, TypeId};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use tokio::task::{JoinError, JoinHandle};
-use tracing::{debug, debug_span, instrument, trace, trace_span, Instrument};
+use tracing::{debug, instrument, trace, trace_span, Instrument};
 
 #[derive(Default)]
 pub struct RegistryBuilder {
@@ -158,7 +156,22 @@ pub enum InitError {
 
 impl fmt::Display for InitError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!("{self:?}")
+        let phase = match self {
+            InitError::PreInit(_) => "pre-",
+            InitError::Init(_) => "",
+            InitError::PostInit(_) => "post-",
+        };
+        let (first, rest) = match self {
+            InitError::PreInit(errors) => errors.split_first(),
+            InitError::Init(error) => Some((error, [].as_slice())),
+            InitError::PostInit(errors) => errors.split_first(),
+        }
+        .unwrap_or_else(|| unreachable!("Error lists should not be empty"));
+        write!(f, "Error during module {phase}initialisation: {first}")?;
+        if rest.is_empty() {
+            write!(f, " (and {} more...)", rest.len())?;
+        }
+        Ok(())
     }
 }
 impl Error for InitError {}

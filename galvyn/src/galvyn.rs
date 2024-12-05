@@ -42,7 +42,7 @@ impl Galvyn {
 
     /// Initializes all modules and start the webserver
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
-        self.modules.init().await.map_err(io::Error::other)?;
+        self.modules.init().await?;
 
         let router = Router::from(mem::take(&mut self.routes)).layer(session::layer());
 
