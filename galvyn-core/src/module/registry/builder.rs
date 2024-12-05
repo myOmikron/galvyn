@@ -8,8 +8,11 @@ use futures_lite::future;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt;
 use tokio::task::{JoinError, JoinHandle};
 
+#[derive(Default)]
 pub struct RegistryBuilder {
     modules: HashMap<TypeId, UninitModule>,
 }
@@ -17,9 +20,7 @@ pub struct RegistryBuilder {
 impl RegistryBuilder {
     /// Constructs a new `RegistryBuilder`
     pub fn new() -> Self {
-        Self {
-            modules: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Adds a new module to the `RegistryBuilder`
@@ -108,6 +109,13 @@ pub enum InitError {
     Init(module::InitError),
     PostInit(Vec<module::PostInitError>),
 }
+
+impl fmt::Display for InitError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        todo!("{self:?}")
+    }
+}
+impl Error for InitError {}
 
 /// An uninitialised module waiting to be pre-initialised
 type UninitModule = Box<dyn Fn() -> JoinHandle<Result<PreInitModule, module::PreInitError>>>;

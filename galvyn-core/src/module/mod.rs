@@ -9,7 +9,7 @@ use std::future::Future;
 use thiserror::Error;
 
 mod impls;
-mod registry;
+pub mod registry;
 
 /// A module is a globally available singleton which exists for the entire duration of the application.
 ///
