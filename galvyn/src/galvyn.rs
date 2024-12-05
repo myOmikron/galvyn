@@ -5,7 +5,8 @@ use crate::core::Module;
 use crate::error::GalvynError;
 use axum::Router;
 use galvyn_core::registry::builder::RegistryBuilder;
-use galvyn_core::GalvynRouter;
+use galvyn_core::{session, GalvynRouter};
+use rorm::Database;
 use tokio::net::TcpListener;
 use tracing::debug;
 use tracing::info;
@@ -28,7 +29,9 @@ impl Galvyn {
 
         registry.init();
 
-        Self::default()
+        let mut galvyn = Galvyn::default();
+        galvyn.register_module::<Database>();
+        galvyn
     }
 
     /// Register a module
@@ -41,7 +44,7 @@ impl Galvyn {
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
         self.modules.init().await.map_err(io::Error::other)?;
 
-        let router = Router::from(mem::take(&mut self.routes));
+        let router = Router::from(mem::take(&mut self.routes)).layer(session::layer());
 
         let socket = TcpListener::bind(socket_addr).await?;
 

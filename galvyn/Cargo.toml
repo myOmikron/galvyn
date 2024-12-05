@@ -17,7 +17,7 @@ galvyn-core = { version = "~0.1", path = "../galvyn-core" }
 # galvyn-contrib-tracing = { version = "~0.1", path = "../contrib/galvyn-contrib-tracing", optional = true }
 
 # Error handling
-thiserror = { version = "~1" }
+thiserror = { version = "~2" }
 
 # Async runtime
 tokio = { version = ">=1.23.1", features = ["net"] }
@@ -28,6 +28,8 @@ tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
 swaggapi = { version = "0.2.2", path = "../swaggapi" }
 galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
+
+rorm = { version = "~0.6", default-features = false, features = ["postgres-only"] }
 
 [features]
 contrib = [

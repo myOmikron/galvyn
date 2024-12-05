@@ -20,6 +20,10 @@ thiserror = "~2"
 rorm = { version = "~0.6", default-features = false, features = ["postgres-only"] }
 
 # TODO: maybe roll our own?
+tower-sessions = { version = "~0.13" }
+tower-sessions-rorm-store = { version = "~0.3" }
+
+# TODO: maybe roll our own?
 envy = { version = "~0.4" }
 
 # ----- #
