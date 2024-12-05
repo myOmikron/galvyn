@@ -47,7 +47,8 @@ impl LeakedModuleSet {
 }
 
 fn downcast_box<T: Module>(module: Box<dyn DynModule>) -> Box<T> {
-    if module.type_id() != TypeId::of::<T>() {
+    if module.as_ref().type_id() != TypeId::of::<T>() {
+        // The two places calling this method ensure `T` to be correct
         unreachable!()
     }
 
