@@ -22,17 +22,29 @@ impl RegistryBuilder {
         Self::default()
     }
 
+    fn contains_module<T: Module>(&self) -> bool {
+        self.modules
+            .iter()
+            .find(|(id, _)| *id == TypeId::of::<T>())
+            .is_some()
+    }
+
     /// Adds a new module to the `RegistryBuilder`
     ///
     /// Calling this method twice with the same `T` is not an error but will only add it once.
     #[instrument(level = "trace", name = "RegistryBuilder::register_module", skip(self), fields(module.name = type_name::<T>()))]
     pub fn register_module<T: Module>(&mut self) -> &mut Self {
-        if self
-            .modules
-            .iter()
-            .find(|(id, _)| *id == TypeId::of::<T>())
-            .is_none()
-        {
+        if self.contains_module::<T>() {
+            debug!(module.name = type_name::<T>(), "Module already registered");
+            return self;
+        } else {
+            <T::Dependencies as ModuleDependencies>::register(self);
+
+            debug_assert!(
+                !self.contains_module::<T>(),
+                "Module dependencies form a cycle"
+            );
+
             self.modules.push((
                 TypeId::of::<T>(),
                 Box::new(|| {
@@ -85,10 +97,6 @@ impl RegistryBuilder {
                 }) as UninitModule,
             ));
             debug!(module.name = type_name::<T>(), "Registered module");
-
-            <T::Dependencies as ModuleDependencies>::register(self);
-        } else {
-            debug!(module.name = type_name::<T>(), "Module already registered");
         }
         self
     }
@@ -101,7 +109,6 @@ impl RegistryBuilder {
         let pre_init_modules = process_join_results(
             self.modules
                 .drain(..)
-                .rev()
                 .map(|(_, x)| x())
                 .collect::<Vec<_>>()
                 .join()
