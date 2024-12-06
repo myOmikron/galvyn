@@ -13,6 +13,7 @@ pub mod module;
 mod router;
 pub mod schema_generator;
 pub mod session;
+pub mod stuff;
 mod util_macros;
 
 pub use self::module::Module;

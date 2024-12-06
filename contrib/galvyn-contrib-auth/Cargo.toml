@@ -8,6 +8,11 @@ description = "Authentication methods for galvyn"
 [dependencies]
 # Core component
 galvyn-core = { version = "*", path = "../../galvyn-core" }
+galvyn-macros = { version = "*", path = "../../galvyn-macros" }
+
+schemars = { version = "~0.8" }
+
+rorm = { version = "~0.6", default-features = false }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
@@ -25,6 +30,7 @@ webauthn-rs = { version = "~0.5", features = ["danger-allow-state-serialisation"
 
 # Serialization support
 serde = { version = "~1", features = ["derive"] }
+serde_json = { version = "~1" }
 
 [features]
 full = [

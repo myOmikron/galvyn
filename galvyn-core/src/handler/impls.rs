@@ -251,7 +251,13 @@ impl ResponseBody for () {
     }
 }
 
-impl<T, E> ShouldBeResponseBody for Result<T, E> {}
+impl<T, E> ShouldBeResponseBody for Result<T, E>
+where
+    T: ShouldBeResponseBody, // TODO: find better solution / compromise
+    E: ShouldBeResponseBody, //       ideally Result<T, E>: ShouldBeResponseBody
+                             //       if either T or E are ShouldBeResponseBody
+{
+}
 impl<T, E> ResponseBody for Result<T, E>
 where
     T: ResponseBody,

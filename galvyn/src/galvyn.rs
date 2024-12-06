@@ -1,5 +1,5 @@
+use std::mem;
 use std::net::SocketAddr;
-use std::{io, mem};
 
 use crate::core::Module;
 use crate::error::GalvynError;
@@ -8,7 +8,6 @@ use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::{session, GalvynRouter};
 use rorm::Database;
 use tokio::net::TcpListener;
-use tracing::debug;
 use tracing::info;
 use tracing::Level;
 use tracing_subscriber::layer::SubscriberExt;
@@ -32,6 +31,11 @@ impl Galvyn {
         let mut galvyn = Galvyn::default();
         galvyn.register_module::<Database>();
         galvyn
+    }
+
+    pub fn add_routes(&mut self, routes: GalvynRouter) -> &mut Self {
+        self.routes = mem::take(&mut self.routes).merge(routes);
+        self
     }
 
     /// Register a module
