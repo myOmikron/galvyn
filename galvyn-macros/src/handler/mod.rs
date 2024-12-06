@@ -113,6 +113,8 @@ pub fn handler(
         };
     }
 
+    let args_todo = sig.inputs.iter().map(|_| quote! {todo!()});
+
     let func_ident = &sig.ident;
 
     let request_types = sig
@@ -215,7 +217,10 @@ pub fn handler(
     let type_params = sig.generics.type_params().map(|param| &param.ident);
     quote! {
         #[allow(non_camel_case_types)]
-        #vis struct #func_ident #impl_generics(::std::marker::PhantomData<((), #(#type_params)*)>);
+        #vis struct #func_ident #impl_generics(
+            #[doc(hidden)]
+            pub ::std::marker::PhantomData<((), #(#type_params)*)>
+        );
         impl #impl_generics #core_crate::handler::GalvynHandler for #func_ident #type_generics #where_clause {
             fn meta(&self) -> #core_crate::handler::HandlerMeta {
                 #core_crate::handler::HandlerMeta {
@@ -248,6 +253,10 @@ pub fn handler(
             }
             fn method_router(&self) -> #core_crate::re_exports::axum::routing::MethodRouter {
                 #tokens
+
+                fn test_send<T: Send>(_f: impl FnOnce() -> T) {}
+                #[allow(unreachable_code)]
+                test_send(|| #func_ident #turbo_fish(#(#args_todo),*));
 
                 #core_crate::re_exports::axum::routing::MethodRouter::new()
                     .on(#core_crate::re_exports::axum::routing::MethodFilter::#method, #func_ident #turbo_fish)
