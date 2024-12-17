@@ -31,7 +31,7 @@ mod schema;
 pub async fn get_login_flow<M: AuthModels>(
     Query(request): Query<GetLoginFlowsRequest>,
 ) -> ApiResult<Json<Option<GetLoginFlowsResponse>>> {
-    let mut tx = AuthModule::global().db.start_transaction().await?;
+    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
 
     let Some((user_pk,)) = QueryBuilder::new(&mut tx, (M::account_pk(),))
         .condition(M::account_id().equals(request.identifier.as_str()))
@@ -83,7 +83,7 @@ pub async fn get_login_flow<M: AuthModels>(
 pub async fn login_oidc<M: AuthModels>(session: Session) -> ApiResult<Redirect> {
     let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
 
-    let request = AuthModule::global()
+    let request = AuthModule::<M>::global()
         .oidc
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
@@ -134,7 +134,7 @@ pub async fn finish_login_oidc<M: AuthModels>(
         return Err("Bad Request".into());
     }
 
-    let token = AuthModule::global()
+    let token = AuthModule::<M>::global()
         .oidc
         .exchange_code(request.code)
         .set_pkce_verifier(pkce_code_verifier)
@@ -142,7 +142,7 @@ pub async fn finish_login_oidc<M: AuthModels>(
         .await?;
 
     let id_token = token.id_token().ok_or_else(|| "Missing id token")?;
-    let claims = id_token.claims(&AuthModule::global().oidc.id_token_verifier(), &nonce)?;
+    let claims = id_token.claims(&AuthModule::<M>::global().oidc.id_token_verifier(), &nonce)?;
 
     // Verify the access token hash to ensure that the access token hasn't been substituted for
     // another user's.
@@ -159,7 +159,7 @@ pub async fn finish_login_oidc<M: AuthModels>(
         return Err("Missing claim: preferred_username".into());
     };
 
-    let mut tx = AuthModule::global().db.start_transaction().await?;
+    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
 
     let account_pk = if let Some((account_fm,)) =
         QueryBuilder::new(&mut tx, (M::oidc_account_fm(),))
@@ -201,7 +201,7 @@ pub async fn login_local_webauthn<M: AuthModels>(
     session: Session,
     Json(request): Json<LoginLocalWebauthnRequest>,
 ) -> ApiResult<Json<RequestChallengeResponse>> {
-    let mut tx = AuthModule::global().db.start_transaction().await?;
+    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
 
     let (account_pk,) = QueryBuilder::new(&mut tx, (M::account_pk(),))
         .condition(M::account_id().equals(&request.identifier))
@@ -232,7 +232,7 @@ pub async fn login_local_webauthn<M: AuthModels>(
         })
         .collect::<Vec<_>>();
 
-    let (challenge, state) = AuthModule::global()
+    let (challenge, state) = AuthModule::<M>::global()
         .webauthn
         .start_attested_passkey_authentication(&keys)?;
 
@@ -267,11 +267,11 @@ pub async fn finish_login_local_webauthn<M: AuthModels>(
         .await?
         .ok_or("Bad Request")?;
 
-    let authentication_result = AuthModule::global()
+    let authentication_result = AuthModule::<M>::global()
         .webauthn
         .finish_attested_passkey_authentication(&request.0, &state)?;
 
-    let mut tx = AuthModule::global().db.start_transaction().await?;
+    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
 
     let (account_pk,) = QueryBuilder::new(&mut tx, (M::account_pk(),))
         .condition(M::account_id().equals(&identifier))
@@ -316,7 +316,7 @@ pub async fn login_local_password<M: AuthModels>(
     session: Session,
     Json(request): Json<LoginLocalPasswordRequest>,
 ) -> ApiResult<()> {
-    let mut tx = AuthModule::global().db.start_transaction().await?;
+    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
 
     let (account_pk,) = QueryBuilder::new(&mut tx, (M::account_pk(),))
         .condition(M::account_id().equals(&request.identifier))

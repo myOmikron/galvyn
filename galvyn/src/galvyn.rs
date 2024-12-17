@@ -14,28 +14,31 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
-#[derive(Default)]
-pub struct Galvyn {
-    modules: RegistryBuilder,
-    routes: GalvynRouter,
-}
+#[non_exhaustive]
+pub struct Galvyn;
 
 impl Galvyn {
-    pub fn init() -> Self {
+    pub fn new() -> ModuleBuilder {
+        ModuleBuilder::new()
+    }
+}
+
+#[derive(Default)]
+pub struct ModuleBuilder {
+    modules: RegistryBuilder,
+}
+
+impl ModuleBuilder {
+    fn new() -> ModuleBuilder {
         let registry = tracing_subscriber::registry()
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(Level::INFO.as_str())))
             .with(tracing_subscriber::fmt::layer());
 
         registry.init();
 
-        let mut galvyn = Galvyn::default();
-        galvyn.register_module::<Database>();
-        galvyn
-    }
-
-    pub fn add_routes(&mut self, routes: GalvynRouter) -> &mut Self {
-        self.routes = mem::take(&mut self.routes).merge(routes);
-        self
+        let mut this = ModuleBuilder::default();
+        this.register_module::<Database>();
+        this
     }
 
     /// Register a module
@@ -44,10 +47,28 @@ impl Galvyn {
         self
     }
 
-    /// Initializes all modules and start the webserver
-    pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
+    pub async fn init_modules(&mut self) -> Result<RouterBuilder, GalvynError> {
         self.modules.init().await?;
+        Ok(RouterBuilder {
+            routes: GalvynRouter::new(),
+        })
+    }
+}
 
+pub struct RouterBuilder {
+    routes: GalvynRouter,
+}
+
+impl RouterBuilder {
+    /// Adds a router to the builder
+    pub fn add_routes(&mut self, router: GalvynRouter) -> &mut Self {
+        let this = mem::take(&mut self.routes);
+        self.routes = this.merge(router);
+        self
+    }
+
+    /// Starts the webserver
+    pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
         let router = Router::from(mem::take(&mut self.routes)).layer(session::layer());
 
         let socket = TcpListener::bind(socket_addr).await?;

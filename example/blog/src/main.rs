@@ -12,8 +12,7 @@ use std::panic;
 use std::panic::Location;
 
 use crate::auth_models::AuthModels;
-use galvyn::contrib::auth;
-use galvyn::core::GalvynRouter;
+use galvyn::core::{GalvynRouter, Module};
 use tracing::error;
 
 #[get("/index")]
@@ -25,27 +24,15 @@ async fn test<const N: usize, T: 'static>() -> String {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing_panic_hook();
 
-    Galvyn::init()
-        .register_module::<AuthModule>()
-        .add_routes(
-            GalvynRouter::new().nest(
-                "/auth",
-                GalvynRouter::new()
-                    .handler(auth::handler::get_login_flow::<AuthModels>(PhantomData))
-                    .handler(auth::handler::login_oidc::<AuthModels>(PhantomData))
-                    .handler(auth::handler::finish_login_oidc::<AuthModels>(PhantomData))
-                    .handler(auth::handler::login_local_webauthn::<AuthModels>(
-                        PhantomData,
-                    ))
-                    .handler(auth::handler::finish_login_local_webauthn::<AuthModels>(
-                        PhantomData,
-                    ))
-                    .handler(auth::handler::login_local_password::<AuthModels>(
-                        PhantomData,
-                    ))
-                    .handler(auth::handler::logout(PhantomData)),
-            ),
-        )
+    Galvyn::new()
+        .register_module::<AuthModule<AuthModels>>()
+        .init_modules()
+        .await?
+        .add_routes(GalvynRouter::new().nest(
+            "/auth",
+            AuthModule::<AuthModels>::global().handler.as_router(),
+        ))
+        .add_routes(GalvynRouter::new().handler(test::<1337, ()>(PhantomData)))
         .start(SocketAddr::from_str("127.0.0.1:8080")?)
         .await?;
 

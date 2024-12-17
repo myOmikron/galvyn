@@ -221,6 +221,12 @@ pub fn handler(
             #[doc(hidden)]
             pub ::std::marker::PhantomData<((), #(#type_params)*)>
         );
+        impl #impl_generics Clone for #func_ident #type_generics #where_clause {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+        impl #impl_generics Copy for #func_ident #type_generics #where_clause {}
         impl #impl_generics #core_crate::handler::GalvynHandler for #func_ident #type_generics #where_clause {
             fn meta(&self) -> #core_crate::handler::HandlerMeta {
                 #core_crate::handler::HandlerMeta {
