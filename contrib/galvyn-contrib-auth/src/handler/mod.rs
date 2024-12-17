@@ -25,6 +25,8 @@ mod oidc;
 #[cfg(feature = "oidc")]
 pub use self::oidc::*;
 
+mod local;
+pub use self::local::*;
 mod schema;
 
 #[get("/login", core_crate = "::galvyn_core")]

@@ -47,6 +47,8 @@ pub struct AuthHandler<M: AuthModels> {
     pub login_local_webauthn: handler::login_local_webauthn<M>,
     pub finish_login_local_webauthn: handler::finish_login_local_webauthn<M>,
     pub login_local_password: handler::login_local_password<M>,
+    pub set_local_password: handler::set_local_password<M>,
+    pub delete_local_password: handler::delete_local_password<M>,
 }
 
 impl<M: AuthModels> Clone for AuthHandler<M> {
@@ -74,7 +76,9 @@ impl<M: AuthModels> AuthHandler<M> {
             .handler(self.logout)
             .handler(self.login_local_webauthn)
             .handler(self.finish_login_local_webauthn)
-            .handler(self.login_local_password);
+            .handler(self.login_local_password)
+            .handler(self.set_local_password)
+            .handler(self.delete_local_password);
 
         #[cfg(feature = "oidc")]
         let router = router
@@ -139,6 +143,8 @@ impl<M: AuthModels> Module for AuthModule<M> {
                 login_local_webauthn: Default::default(),
                 finish_login_local_webauthn: Default::default(),
                 login_local_password: Default::default(),
+                set_local_password: Default::default(),
+                delete_local_password: Default::default(),
             },
         }))
     }

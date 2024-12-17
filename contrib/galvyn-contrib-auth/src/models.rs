@@ -5,12 +5,16 @@ use rorm::internal::field::{Field, FieldProxy};
 use rorm::model::GetField;
 use rorm::prelude::ForeignModelByField;
 use rorm::{Model, Patch};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::{AttestedPasskey, Passkey};
 
 pub trait AuthModels: Send + Sync + 'static {
-    type Account: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Serialize + Send>>
-        + GetField<<Self::Account as Model>::Primary>
+    type Account: Model<
+            Primary: Field<
+                Type: FieldType<Decoder: Send> + AsDbType + Serialize + DeserializeOwned + Send,
+            >,
+        > + GetField<<Self::Account as Model>::Primary>
         + Send;
     /// The account's identifier field
     ///
@@ -46,7 +50,8 @@ pub trait AuthModels: Send + Sync + 'static {
     ) -> impl Patch<Model = Self::OidcAccount> + Send + Sync;
 
     type LocalAccount: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Send>>
-        + GetField<<Self::LocalAccount as Model>::Primary>;
+        + GetField<<Self::LocalAccount as Model>::Primary>
+        + Sync;
     fn local_account_pk() -> FieldProxy<<Self::LocalAccount as Model>::Primary, Self::LocalAccount>
     {
         FieldProxy::new()
