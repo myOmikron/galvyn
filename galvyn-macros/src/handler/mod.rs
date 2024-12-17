@@ -227,6 +227,11 @@ pub fn handler(
             }
         }
         impl #impl_generics Copy for #func_ident #type_generics #where_clause {}
+        impl #impl_generics Default for #func_ident #type_generics #where_clause {
+            fn default() -> Self {
+                Self(::std::marker::PhantomData)
+            }
+        }
         impl #impl_generics #core_crate::handler::GalvynHandler for #func_ident #type_generics #where_clause {
             fn meta(&self) -> #core_crate::handler::HandlerMeta {
                 #core_crate::handler::HandlerMeta {

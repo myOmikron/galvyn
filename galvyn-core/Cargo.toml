@@ -8,7 +8,7 @@ description = "Core concepts for galvyn like trait definitions"
 
 [dependencies]
 # Webserver
-axum = { version = "~0.7", default-features = false }
+axum = { version = "~0.7", default-features = false, features = ["query", "form", "json"] }
 bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { version = "~1" }
