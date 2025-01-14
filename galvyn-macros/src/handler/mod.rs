@@ -268,6 +268,9 @@ pub fn handler(
                 fn test_send<T: Send>(_f: impl FnOnce() -> T) {}
                 #[allow(unreachable_code)]
                 test_send(|| #func_ident #turbo_fish(#(#args_todo),*));
+                #(
+                    test_send::<#request_types>(|| panic!());
+                )*
 
                 #core_crate::re_exports::axum::routing::MethodRouter::new()
                     .on(#core_crate::re_exports::axum::routing::MethodFilter::#method, #func_ident #turbo_fish)

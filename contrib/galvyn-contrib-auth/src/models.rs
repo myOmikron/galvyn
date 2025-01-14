@@ -12,10 +12,16 @@ use webauthn_rs::prelude::{AttestedPasskey, Passkey};
 pub trait AuthModels: Send + Sync + 'static {
     type Account: Model<
             Primary: Field<
-                Type: FieldType<Decoder: Send> + AsDbType + Serialize + DeserializeOwned + Send,
+                Type: FieldType<Decoder: Send>
+                          + AsDbType
+                          + Serialize
+                          + DeserializeOwned
+                          + Send
+                          + Sync,
             >,
         > + GetField<<Self::Account as Model>::Primary>
-        + Send;
+        + Send
+        + Sync;
     /// The account's identifier field
     ///
     /// The identifier is a string used by users to identify their accounts.
@@ -30,7 +36,9 @@ pub trait AuthModels: Send + Sync + 'static {
     }
     fn insertable_account(id: String) -> impl Patch<Model = Self::Account> + Send + Sync;
 
-    type OidcAccount: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Send>> + Send;
+    type OidcAccount: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Send + Sync>>
+        + Send
+        + Sync;
     fn oidc_account_pk() -> FieldProxy<<Self::OidcAccount as Model>::Primary, Self::OidcAccount> {
         FieldProxy::new()
     }
@@ -49,7 +57,7 @@ pub trait AuthModels: Send + Sync + 'static {
         account_pk: &<<Self::Account as Model>::Primary as Field>::Type,
     ) -> impl Patch<Model = Self::OidcAccount> + Send + Sync;
 
-    type LocalAccount: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Send>>
+    type LocalAccount: Model<Primary: Field<Type: FieldType<Decoder: Send> + AsDbType + Send + Sync>>
         + GetField<<Self::LocalAccount as Model>::Primary>
         + Sync;
     fn local_account_pk() -> FieldProxy<<Self::LocalAccount as Model>::Primary, Self::LocalAccount>

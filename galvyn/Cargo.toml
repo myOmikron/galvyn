@@ -8,7 +8,7 @@ description = "Core-component for the galvyn web-framework"
 
 [dependencies]
 # Webserver
-axum = { version = "~0.7" }
+axum = { workspace = true, default-features = false, features = ["tokio", "http1"] }
 
 # Core
 galvyn-core = { version = "~0.1", path = "../galvyn-core" }

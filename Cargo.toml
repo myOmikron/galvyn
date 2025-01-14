@@ -10,3 +10,6 @@ members = [
     "./example/blog",
     "./swaggapi",
 ]
+
+[workspace.dependencies]
+axum = { version = "~0.8", default-features = false }

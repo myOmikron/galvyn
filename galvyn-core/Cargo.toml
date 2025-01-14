@@ -8,20 +8,20 @@ description = "Core concepts for galvyn like trait definitions"
 
 [dependencies]
 # Webserver
-axum = { version = "~0.7", default-features = false, features = ["query", "form", "json"] }
+axum = { workspace = true, default-features = false, features = ["query", "form", "json"] }
 bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { version = "~1" }
 schemars = { version = "~0.8" }
-tower = { version = "~0.4" }
+tower = { version = "~0.5" }
 regex = { version = "~1" }
 tracing = { version = "~0.1" }
 thiserror = "~2"
 rorm = { version = "~0.6", default-features = false, features = ["postgres-only"] }
 
 # TODO: maybe roll our own?
-tower-sessions = { version = "~0.13" }
-tower-sessions-rorm-store = { version = "~0.3" }
+tower-sessions = { version = "~0.14", features = ["axum-core"] }
+tower-sessions-rorm-store = { version = "~0.4" }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
