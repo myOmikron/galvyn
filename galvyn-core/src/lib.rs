@@ -4,6 +4,7 @@ pub use crate::module::*;
 
 pub mod re_exports {
     pub use axum;
+    pub use rorm;
 }
 
 pub mod handler;

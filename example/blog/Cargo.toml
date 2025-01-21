@@ -13,6 +13,5 @@ galvyn = { path = "../../galvyn", version = "*", features = ["contrib"] }
 # async runtime
 tokio = { version = ">=1.23.1", features = ["full"] }
 
-rorm = { version = "~0.6", default-features = false, features = ["postgres-only", "tokio"] }
 serde = { version = "1.0.214", features = ["derive"] }
 tracing = "0.1.40"

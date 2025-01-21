@@ -17,11 +17,13 @@ tower = { version = "~0.5" }
 regex = { version = "~1" }
 tracing = { version = "~0.1" }
 thiserror = "~2"
-rorm = { version = "~0.6", default-features = false, features = ["postgres-only"] }
+rorm = { workspace = true, features = ["time"] }
 
 # TODO: maybe roll our own?
-tower-sessions = { version = "~0.14", features = ["axum-core"] }
-tower-sessions-rorm-store = { version = "~0.4" }
+tower-sessions = { version = "~0.14" }
+# required by tower-sessions
+async-trait = { version = "~0.1" }
+base64 = { version = "~0.22" }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }

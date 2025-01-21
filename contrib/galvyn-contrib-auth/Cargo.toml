@@ -12,7 +12,7 @@ galvyn-macros = { version = "*", path = "../../galvyn-macros" }
 
 schemars = { version = "~0.8" }
 
-rorm = { version = "~0.6", default-features = false }
+rorm = { workspace = true }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
