@@ -15,7 +15,7 @@ galvyn-core = { version = "~0.1", path = "../galvyn-core" }
 
 # Contrib modules
 # galvyn-contrib-tracing = { version = "~0.1", path = "../contrib/galvyn-contrib-tracing", optional = true }
-galvyn-contrib-auth = { version = "~0.1", path = "../contrib/galvyn-contrib-auth", optional = true }
+# galvyn-contrib-auth = { version = "~0.1", path = "../contrib/galvyn-contrib-auth", optional = true }
 
 # Error handling
 thiserror = { version = "~2" }
@@ -33,5 +33,5 @@ galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
 [features]
 contrib = [
     # "dep:galvyn-contrib-tracing",
-    "dep:galvyn-contrib-auth",
+    # "dep:galvyn-contrib-auth",
 ]
