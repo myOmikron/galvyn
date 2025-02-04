@@ -11,7 +11,6 @@ use rorm::insert;
 use rorm::query;
 use rorm::update;
 use rorm::Database;
-use rorm::FieldAccess;
 use rorm::Model;
 use schemars::_serde_json::Value;
 use thiserror::Error;
