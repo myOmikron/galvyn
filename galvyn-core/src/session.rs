@@ -17,9 +17,10 @@ use thiserror::Error;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::cookie::time::OffsetDateTime;
 use tower_sessions::cookie::SameSite;
+pub use tower_sessions::session::Error;
 use tower_sessions::session::Id;
 use tower_sessions::session::Record;
-use tower_sessions::session_store::Error;
+use tower_sessions::session_store::Error as StoreError;
 use tower_sessions::ExpiredDeletion;
 use tower_sessions::Expiry;
 pub use tower_sessions::Session;
@@ -223,7 +224,7 @@ pub enum RormStoreError {
     DecodingFailed(#[from] base64::DecodeSliceError),
 }
 
-impl From<RormStoreError> for Error {
+impl From<RormStoreError> for StoreError {
     fn from(value: RormStoreError) -> Self {
         Self::Backend(value.to_string())
     }
