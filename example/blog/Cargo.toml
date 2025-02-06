@@ -10,6 +10,8 @@ description = "A blog created with galvyn"
 # Framework
 galvyn = { path = "../../galvyn", version = "*", features = ["contrib"] }
 
+rorm = { workspace = true }
+
 # async runtime
 tokio = { version = ">=1.23.1", features = ["full"] }
 

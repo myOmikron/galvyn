@@ -5,11 +5,7 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use rorm::and;
-use rorm::delete;
 use rorm::fields::types::Json;
-use rorm::insert;
-use rorm::query;
-use rorm::update;
 use rorm::Database;
 use rorm::Model;
 use schemars::_serde_json::Value;
@@ -85,14 +81,14 @@ impl SessionStore for RormStore {
             .await
             .map_err(RormStoreError::from)?;
         loop {
-            let existing = query!(&mut tx, GalvynSession)
+            let existing = rorm::query(&mut tx, GalvynSession)
                 .condition(GalvynSession.id.equals(session_record.id.to_string()))
                 .optional()
                 .await
                 .map_err(RormStoreError::from)?;
 
             if existing.is_none() {
-                insert!(&mut tx, GalvynSession)
+                rorm::insert(&mut tx, GalvynSession)
                     .return_nothing()
                     .single(&GalvynSession {
                         id: session_record.id.to_string(),
@@ -127,21 +123,21 @@ impl SessionStore for RormStore {
             .await
             .map_err(RormStoreError::from)?;
 
-        let existing_session = query!(&mut tx, GalvynSession)
+        let existing_session = rorm::query(&mut tx, GalvynSession)
             .condition(GalvynSession.id.equals(id.to_string()))
             .optional()
             .await
             .map_err(RormStoreError::from)?;
 
         if existing_session.is_some() {
-            update!(&mut tx, GalvynSession)
+            rorm::update(&mut tx, GalvynSession)
                 .set(GalvynSession.expires_at, *expiry_date)
                 .set(GalvynSession.data, Json(data.clone()))
                 .condition(GalvynSession.id.equals(id.to_string()))
                 .await
                 .map_err(RormStoreError::from)?;
         } else {
-            insert!(&mut tx, GalvynSession)
+            rorm::insert(&mut tx, GalvynSession)
                 .single(&GalvynSession {
                     id: id.to_string(),
                     expires_at: *expiry_date,
@@ -161,7 +157,7 @@ impl SessionStore for RormStore {
         debug!("Loading session");
         let db = &self.db;
 
-        let session = query!(db, GalvynSession)
+        let session = rorm::query(db, GalvynSession)
             .condition(and!(
                 GalvynSession.id.equals(session_id.to_string()),
                 GalvynSession
@@ -186,7 +182,7 @@ impl SessionStore for RormStore {
     async fn delete(&self, session_id: &Id) -> tower_sessions::session_store::Result<()> {
         let db = &self.db;
 
-        delete!(db, GalvynSession)
+        rorm::delete(db, GalvynSession)
             .condition(GalvynSession.id.equals(session_id.to_string()))
             .await
             .map_err(RormStoreError::from)?;
@@ -201,7 +197,7 @@ impl ExpiredDeletion for RormStore {
     async fn delete_expired(&self) -> tower_sessions::session_store::Result<()> {
         let db = &self.db;
 
-        delete!(db, GalvynSession)
+        rorm::delete(db, GalvynSession)
             .condition(
                 GalvynSession
                     .expires_at
