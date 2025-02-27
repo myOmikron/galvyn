@@ -2,9 +2,8 @@ use crate::handler::schema::{
     GetLoginFlowsRequest, GetLoginFlowsResponse, LocalLoginFlow, LoginLocalPasswordRequest,
     LoginLocalWebauthnRequest, OidcLoginFlow, PublicKeyCredential,
 };
-use crate::models::AuthModels;
 use crate::module::AuthModule;
-use crate::MaybeAttestedPasskey;
+use crate::{Account, MaybeAttestedPasskey};
 use galvyn_core::re_exports::axum::extract::Query;
 
 use galvyn_core::re_exports::axum::Json;
@@ -13,8 +12,7 @@ use galvyn_core::stuff::api_error::ApiResult;
 use galvyn_core::Module;
 use galvyn_macros::{get, post};
 
-use rorm::internal::field::foreign_model::FieldEq_ForeignModelByField_Borrowed;
-
+use crate::models::{LocalAccount, OidcAccount, WebAuthnKey};
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::{AttestedPasskeyAuthentication, RequestChallengeResponse};
 
@@ -28,40 +26,34 @@ pub use self::local::*;
 mod schema;
 
 #[get("/login", core_crate = "::galvyn_core")]
-pub async fn get_login_flow<M: AuthModels>(
+pub async fn get_login_flow(
     Query(request): Query<GetLoginFlowsRequest>,
 ) -> ApiResult<Json<Option<GetLoginFlowsResponse>>> {
-    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
+    let mut tx = AuthModule::global().db.start_transaction().await?;
 
-    let Some(user_pk) = rorm::query(&mut tx, M::account_pk())
-        .condition(M::account_id().equals(request.identifier.as_str()))
+    let Some(account_pk) = rorm::query(&mut tx, Account.pk)
+        .condition(Account.id.equals(request.identifier.as_str()))
         .optional()
         .await?
     else {
         return Ok(Json(None));
     };
 
-    let oidc = rorm::query(&mut tx, M::oidc_account_pk())
-        .condition(M::oidc_account_fm().equals::<_, FieldEq_ForeignModelByField_Borrowed>(&user_pk))
+    let oidc = rorm::query(&mut tx, OidcAccount.account)
+        .condition(OidcAccount.account.equals(&account_pk))
         .optional()
         .await?;
 
-    let local = rorm::query(
-        &mut tx,
-        (M::local_account_pk(), M::local_account_password()),
-    )
-    .condition(M::local_account_fm().equals::<_, FieldEq_ForeignModelByField_Borrowed>(&user_pk))
-    .optional()
-    .await?;
+    let local = rorm::query(&mut tx, (LocalAccount.pk, LocalAccount.password))
+        .condition(LocalAccount.account.equals(&account_pk))
+        .optional()
+        .await?;
 
     let response = match (oidc, local) {
         (Some(_), None) => GetLoginFlowsResponse::Oidc(OidcLoginFlow {}),
         (None, Some((local_pk, password))) => {
-            let webauthn = rorm::query(&mut tx, M::webauthn_key_key())
-                .condition(
-                    M::webauthn_key_fm()
-                        .equals::<_, FieldEq_ForeignModelByField_Borrowed>(&local_pk),
-                )
+            let webauthn = rorm::query(&mut tx, WebAuthnKey.key)
+                .condition(WebAuthnKey.local_account.equals(&local_pk))
                 .all()
                 .await?
                 .into_iter()
@@ -80,31 +72,26 @@ pub async fn get_login_flow<M: AuthModels>(
 }
 
 #[post("/login/local/start-webauthn", core_crate = "::galvyn_core")]
-pub async fn login_local_webauthn<M: AuthModels>(
+pub async fn login_local_webauthn(
     session: Session,
     Json(request): Json<LoginLocalWebauthnRequest>,
 ) -> ApiResult<Json<RequestChallengeResponse>> {
-    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
+    let mut tx = AuthModule::global().db.start_transaction().await?;
 
-    let account_pk = rorm::query(&mut tx, M::account_pk())
-        .condition(M::account_id().equals(&request.identifier))
+    let account_pk = rorm::query(&mut tx, Account.pk)
+        .condition(Account.id.equals(&request.identifier))
         .optional()
         .await?
         .ok_or("Account not found")?;
 
-    let local_account_pk = rorm::query(&mut tx, M::local_account_pk())
-        .condition(
-            M::local_account_fm().equals::<_, FieldEq_ForeignModelByField_Borrowed>(&account_pk),
-        )
+    let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
+        .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
         .ok_or("Not a local account")?;
 
-    let keys = rorm::query(&mut tx, M::webauthn_key_key())
-        .condition(
-            M::webauthn_key_fm()
-                .equals::<_, FieldEq_ForeignModelByField_Borrowed>(&local_account_pk),
-        )
+    let keys = rorm::query(&mut tx, WebAuthnKey.key)
+        .condition(WebAuthnKey.local_account.equals(&local_account_pk))
         .all()
         .await?;
     let keys = keys
@@ -115,7 +102,7 @@ pub async fn login_local_webauthn<M: AuthModels>(
         })
         .collect::<Vec<_>>();
 
-    let (challenge, state) = AuthModule::<M>::global()
+    let (challenge, state) = AuthModule::global()
         .webauthn
         .start_attested_passkey_authentication(&keys)?;
 
@@ -141,7 +128,7 @@ struct LoginLocalWebauthnSessionData {
 }
 
 #[post("/login/local/finish-webauthn", core_crate = "::galvyn_core")]
-pub async fn finish_login_local_webauthn<M: AuthModels>(
+pub async fn finish_login_local_webauthn(
     session: Session,
     Json(request): Json<PublicKeyCredential>,
 ) -> ApiResult<()> {
@@ -150,31 +137,26 @@ pub async fn finish_login_local_webauthn<M: AuthModels>(
         .await?
         .ok_or("Bad Request")?;
 
-    let authentication_result = AuthModule::<M>::global()
+    let authentication_result = AuthModule::global()
         .webauthn
         .finish_attested_passkey_authentication(&request.0, &state)?;
 
-    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
+    let mut tx = AuthModule::global().db.start_transaction().await?;
 
-    let account_pk = rorm::query(&mut tx, M::account_pk())
-        .condition(M::account_id().equals(&identifier))
+    let account_pk = rorm::query(&mut tx, Account.pk)
+        .condition(Account.id.equals(&identifier))
         .optional()
         .await?
         .ok_or("Account not found")?;
 
-    let local_account_pk = rorm::query(&mut tx, M::local_account_pk())
-        .condition(
-            M::local_account_fm().equals::<_, FieldEq_ForeignModelByField_Borrowed>(&account_pk),
-        )
+    let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
+        .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
         .ok_or("Not a local account")?;
 
-    let keys = rorm::query(&mut tx, M::webauthn_key_key())
-        .condition(
-            M::webauthn_key_fm()
-                .equals::<_, FieldEq_ForeignModelByField_Borrowed>(&local_account_pk),
-        )
+    let keys = rorm::query(&mut tx, WebAuthnKey.key)
+        .condition(WebAuthnKey.local_account.equals(&local_account_pk))
         .all()
         .await?;
     let _used_key = keys
@@ -195,22 +177,20 @@ pub async fn finish_login_local_webauthn<M: AuthModels>(
 }
 
 #[post("/login/local/password", core_crate = "::galvyn_core")]
-pub async fn login_local_password<M: AuthModels>(
+pub async fn login_local_password(
     session: Session,
     Json(request): Json<LoginLocalPasswordRequest>,
 ) -> ApiResult<()> {
-    let mut tx = AuthModule::<M>::global().db.start_transaction().await?;
+    let mut tx = AuthModule::global().db.start_transaction().await?;
 
-    let (account_pk,) = rorm::query(&mut tx, (M::account_pk(),))
-        .condition(M::account_id().equals(&request.identifier))
+    let account_pk = rorm::query(&mut tx, Account.pk)
+        .condition(Account.id.equals(&request.identifier))
         .optional()
         .await?
         .ok_or("Account not found")?;
 
-    let (local_account_password,) = rorm::query(&mut tx, (M::local_account_password(),))
-        .condition(
-            M::local_account_fm().equals::<_, FieldEq_ForeignModelByField_Borrowed>(&account_pk),
-        )
+    let local_account_password = rorm::query(&mut tx, LocalAccount.password)
+        .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
         .ok_or("Not a local account")?;

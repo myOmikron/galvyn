@@ -1,4 +1,4 @@
-use crate::{handler, AuthModels};
+use crate::handler;
 use galvyn_core::{GalvynRouter, InitError, Module, PreInitError};
 #[cfg(feature = "oidc")]
 use openidconnect::core::{CoreClient as OidcClient, CoreProviderMetadata};
@@ -8,7 +8,6 @@ use openidconnect::{ClientId, ClientSecret, IssuerUrl};
 use rorm::Database;
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Future};
-use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::{fs, io};
 use webauthn_rs::prelude::{AttestationCaList, Url};
@@ -18,25 +17,24 @@ use webauthn_rs::{Webauthn, WebauthnBuilder};
 type OidcClient = ();
 
 /// The authentication module provides the state required by the authentication handlers
-pub struct AuthModule<M: AuthModels> {
-    pub handler: AuthHandler<M>,
+pub struct AuthModule {
+    pub handler: AuthHandler,
     pub(crate) db: Database,
     #[cfg_attr(not(feature = "oidc"), allow(unused))]
     pub(crate) oidc: OidcClient,
     pub(crate) webauthn: Webauthn,
     pub(crate) attestation_ca_list: AttestationCaList,
-    models: PhantomData<M>,
 }
 
 #[non_exhaustive]
-pub struct AuthHandler<M: AuthModels> {
-    pub get_login_flow: handler::get_login_flow<M>,
+pub struct AuthHandler {
+    pub get_login_flow: handler::get_login_flow,
     pub logout: handler::logout,
 
     #[cfg(feature = "oidc")]
-    pub login_oidc: handler::login_oidc<M>,
+    pub login_oidc: handler::login_oidc,
     #[cfg(feature = "oidc")]
-    pub finish_login_oidc: handler::finish_login_oidc<M>,
+    pub finish_login_oidc: handler::finish_login_oidc,
     #[cfg(not(feature = "oidc"))]
     #[allow(unused)]
     login_oidc: (),
@@ -44,19 +42,19 @@ pub struct AuthHandler<M: AuthModels> {
     #[allow(unused)]
     finish_login_oidc: (),
 
-    pub login_local_webauthn: handler::login_local_webauthn<M>,
-    pub finish_login_local_webauthn: handler::finish_login_local_webauthn<M>,
-    pub login_local_password: handler::login_local_password<M>,
-    pub set_local_password: handler::set_local_password<M>,
-    pub delete_local_password: handler::delete_local_password<M>,
+    pub login_local_webauthn: handler::login_local_webauthn,
+    pub finish_login_local_webauthn: handler::finish_login_local_webauthn,
+    pub login_local_password: handler::login_local_password,
+    pub set_local_password: handler::set_local_password,
+    pub delete_local_password: handler::delete_local_password,
 }
 
-impl<M: AuthModels> Clone for AuthHandler<M> {
+impl Clone for AuthHandler {
     fn clone(&self) -> Self {
         *self
     }
 }
-impl<M: AuthModels> Copy for AuthHandler<M> {}
+impl Copy for AuthHandler {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthConfig {
@@ -69,7 +67,7 @@ pub struct AuthConfig {
     pub webauthn_attestation_ca_list: PathBuf,
 }
 
-impl<M: AuthModels> AuthHandler<M> {
+impl AuthHandler {
     pub fn as_router(&self) -> GalvynRouter {
         let router = GalvynRouter::new()
             .handler(self.get_login_flow)
@@ -89,7 +87,7 @@ impl<M: AuthModels> AuthHandler<M> {
     }
 }
 
-impl<M: AuthModels> Module for AuthModule<M> {
+impl Module for AuthModule {
     type PreInit = (OidcClient, Webauthn, AttestationCaList);
 
     fn pre_init() -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
@@ -132,7 +130,6 @@ impl<M: AuthModels> Module for AuthModule<M> {
             oidc,
             webauthn,
             attestation_ca_list,
-            models: PhantomData,
             handler: AuthHandler {
                 get_login_flow: Default::default(),
                 logout: Default::default(),

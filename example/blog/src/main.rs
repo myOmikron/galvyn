@@ -1,5 +1,3 @@
-mod auth_models;
-
 use std::any::type_name;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -11,7 +9,6 @@ use std::marker::PhantomData;
 use std::panic;
 use std::panic::Location;
 
-use crate::auth_models::AuthModels;
 use galvyn::core::{GalvynRouter, Module};
 use tracing::error;
 
@@ -25,13 +22,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing_panic_hook();
 
     Galvyn::new()
-        .register_module::<AuthModule<AuthModels>>()
+        .register_module::<AuthModule>()
         .init_modules()
         .await?
-        .add_routes(GalvynRouter::new().nest(
-            "/auth",
-            AuthModule::<AuthModels>::global().handler.as_router(),
-        ))
+        .add_routes(GalvynRouter::new().nest("/auth", AuthModule::global().handler.as_router()))
         .add_routes(GalvynRouter::new().handler(test::<1337, ()>(PhantomData)))
         .start(SocketAddr::from_str("127.0.0.1:8080")?)
         .await?;
