@@ -27,6 +27,8 @@ pub use crate::galvyn::*;
 pub mod error;
 mod galvyn;
 mod macro_docs;
+#[cfg(feature = "openapi")]
+pub mod openapi;
 
 pub use macro_docs::*;
 pub use swaggapi;

@@ -1,20 +1,19 @@
-use std::mem;
-use std::net::SocketAddr;
-
-use axum::Router;
+use crate::core::Module;
+use crate::error::GalvynError;
 use galvyn_core::re_exports::rorm::Database;
 use galvyn_core::registry::builder::RegistryBuilder;
+use galvyn_core::router::MutHandlerMeta;
 use galvyn_core::session;
 use galvyn_core::GalvynRouter;
+use std::mem;
+use std::net::SocketAddr;
+use std::sync::RwLock;
 use tokio::net::TcpListener;
 use tracing::info;
 use tracing::Level;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
-
-use crate::core::Module;
-use crate::error::GalvynError;
 
 #[non_exhaustive]
 pub struct Galvyn;
@@ -71,13 +70,23 @@ impl RouterBuilder {
 
     /// Starts the webserver
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
-        let router = Router::from(mem::take(&mut self.routes)).layer(session::layer());
+        let (router, handlers) = mem::take(&mut self.routes).finish();
+
+        *HANDLERS.write().unwrap() = handlers.leak();
 
         let socket = TcpListener::bind(socket_addr).await?;
 
         info!("Starting to serve webserver on http://{socket_addr}");
-        axum::serve(socket, router).await?;
+        axum::serve(socket, router.layer(session::layer())).await?;
 
         Ok(())
     }
+}
+
+static HANDLERS: RwLock<&'static [MutHandlerMeta]> = RwLock::new(&[]);
+
+/// Quick and dirty solution to expose the registered handlers after startup
+#[doc(hidden)]
+pub fn get_routes() -> &'static [MutHandlerMeta] {
+    *HANDLERS.read().unwrap()
 }

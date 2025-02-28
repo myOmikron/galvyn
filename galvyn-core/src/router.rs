@@ -98,8 +98,7 @@ impl GalvynRouter {
         self.handlers.push(handler);
     }
 
-    /// Adds the handlers to their api pages and returns the contained framework impl
-    fn finish(self) -> Router {
+    pub fn finish(self) -> (Router, Vec<MutHandlerMeta>) {
         // for mut handler in self.handlers {
         //     handler.path = framework_path_to_openapi(handler.path);
         //
@@ -108,7 +107,7 @@ impl GalvynRouter {
         //         page.add_handler(&handler);
         //     }
         // }
-        return self.router;
+        return (self.router, self.handlers);
 
         /// Converts the framework's syntax for path parameters into openapi's
         fn framework_path_to_openapi(framework_path: String) -> String {
@@ -185,15 +184,9 @@ impl GalvynRouter {
     }
 }
 
-impl From<GalvynRouter> for Router {
-    fn from(router: GalvynRouter) -> Self {
-        router.finish()
-    }
-}
-
 /// A wrapped [`HandlerMeta`] used inside [`GalvynRouter`] to allow modifications.
 #[derive(Debug)]
-pub(crate) struct MutHandlerMeta {
+pub struct MutHandlerMeta {
     /// The original unmodified [`HandlerMeta`]
     pub original: HandlerMeta,
 
