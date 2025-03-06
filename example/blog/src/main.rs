@@ -5,14 +5,12 @@ use std::str::FromStr;
 use galvyn::contrib::auth::AuthModule;
 use galvyn::{get, Galvyn};
 use std::any::Any;
-use std::marker::PhantomData;
 use std::panic;
 use std::panic::Location;
 
 use galvyn::core::re_exports::axum::response::{IntoResponse, Response};
 use galvyn::core::re_exports::axum::Json;
 use galvyn::core::{GalvynRouter, Module};
-use galvyn::openapi::OpenAPI;
 use tracing::error;
 
 #[get("/index")]
@@ -36,8 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_routes(GalvynRouter::new().nest("/auth", AuthModule::global().handler.as_router()))
         .add_routes(
             GalvynRouter::new()
-                .handler(test::<1337, ()>(PhantomData))
-                .handler(openapi(PhantomData)),
+                .handler(test::<1337, ()>)
+                .handler(openapi),
         )
         .start(SocketAddr::from_str("127.0.0.1:8080")?)
         .await?;

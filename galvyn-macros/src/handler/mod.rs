@@ -116,6 +116,8 @@ pub fn handler(
     let args_todo = sig.inputs.iter().map(|_| quote! {todo!()});
 
     let func_ident = &sig.ident;
+    let module_ident = format_ident!("__{func_ident}_module");
+    let marker_ident = format_ident!("__{func_ident}_marker");
 
     let request_types = sig
         .inputs
@@ -216,11 +218,19 @@ pub fn handler(
     let turbo_fish = type_generics.as_turbofish();
     let type_params = sig.generics.type_params().map(|param| &param.ident);
     quote! {
-        #[allow(non_camel_case_types)]
-        #vis struct #func_ident #impl_generics(
-            #[doc(hidden)]
-            pub ::std::marker::PhantomData<((), #(#type_params)*)>
-        );
+        mod #module_ident {
+            pub use self::#func_ident::*;
+
+            #[allow(non_camel_case_types)]
+            pub enum #func_ident #impl_generics {
+                #func_ident,
+
+                #[doc(hidden)]
+                #marker_ident(::std::convert::Infallible, ::std::marker::PhantomData<((), #(#type_params)*)>),
+            }
+        }
+        #vis use #module_ident::*;
+
         impl #impl_generics Clone for #func_ident #type_generics #where_clause {
             fn clone(&self) -> Self {
                 *self
@@ -229,7 +239,7 @@ pub fn handler(
         impl #impl_generics Copy for #func_ident #type_generics #where_clause {}
         impl #impl_generics Default for #func_ident #type_generics #where_clause {
             fn default() -> Self {
-                Self(::std::marker::PhantomData)
+                Self::#func_ident
             }
         }
         impl #impl_generics #core_crate::handler::GalvynHandler for #func_ident #type_generics #where_clause {
