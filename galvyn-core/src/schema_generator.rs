@@ -1,14 +1,14 @@
 use std::mem;
 
-use schemars::gen::SchemaGenerator as InnerGenerator;
-use schemars::gen::SchemaSettings;
-use schemars::schema::{ObjectValidation, Schema, SchemaObject};
 use schemars::JsonSchema;
 use schemars::Map;
+use schemars::r#gen::SchemaGenerator as InnerGenerator;
+use schemars::r#gen::SchemaSettings;
+use schemars::schema::{ObjectValidation, Schema, SchemaObject};
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
-/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::gen::SchemaGenerator),
+/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::r#gen::SchemaGenerator),
 /// you can use [`AsRef`] and [`AsMut`] to gain access.
 pub struct SchemaGenerator(InnerGenerator);
 impl AsRef<InnerGenerator> for SchemaGenerator {
@@ -80,16 +80,16 @@ impl SchemaGenerator {
         // Construct new empty generator
         let mut settings = SchemaSettings::openapi3();
         settings.visitors = Vec::new();
-        let mut gen = Self(InnerGenerator::new(settings));
+        let mut generator = Self(InnerGenerator::new(settings));
 
         // Give the `definitions` to the generator for him to extend
-        *gen.as_mut().definitions_mut() = mem::take(definitions);
+        *generator.as_mut().definitions_mut() = mem::take(definitions);
 
         // Run the `func` with the generator
-        let output = func(&mut gen);
+        let output = func(&mut generator);
 
         // Take the (potentially modified) `definitions` back
-        *definitions = gen.as_mut().take_definitions();
+        *definitions = generator.as_mut().take_definitions();
 
         output
     }

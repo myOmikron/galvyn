@@ -95,7 +95,7 @@ impl IntoResponse for ApiError {
 
 impl ShouldBeResponseBody for ApiError {}
 impl ResponseBody for ApiError {
-    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+    fn body(_generator: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
         todo!()
     }
 }

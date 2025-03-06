@@ -10,7 +10,7 @@ pub trait ResponseBody: ShouldBeResponseBody {
     fn header() -> Vec<HeaderName> {
         vec![]
     }
-    fn body(_gen: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
+    fn body(_generator: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
 }
 
 pub trait ShouldBeResponseBody {}
