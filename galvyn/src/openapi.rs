@@ -3,13 +3,15 @@ use axum::http::Method;
 use galvyn_core::re_exports::schemars;
 use galvyn_core::schema_generator::SchemaGenerator;
 use openapiv3::{
-    Components, Info, MediaType, OpenAPI, PathItem, Paths, ReferenceOr, RequestBody, Response,
-    Schema, SchemaKind, StatusCode,
+    Components, Info, MediaType, PathItem, Paths, ReferenceOr, RequestBody, Response, Schema,
+    SchemaKind, StatusCode,
 };
 use std::collections::BTreeMap;
 use std::mem;
 use std::sync::OnceLock;
 use tracing::{debug, warn};
+
+pub use openapiv3::OpenAPI;
 
 pub fn get_openapi() -> &'static OpenAPI {
     static OPENAPI: OnceLock<OpenAPI> = OnceLock::new();

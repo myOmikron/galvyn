@@ -8,7 +8,7 @@ description = "A blog created with galvyn"
 
 [dependencies]
 # Framework
-galvyn = { path = "../../galvyn", version = "*", features = ["contrib"] }
+galvyn = { path = "../../galvyn", version = "*", features = ["contrib", "openapi"] }
 
 # async runtime
 tokio = { version = ">=1.23.1", features = ["full"] }

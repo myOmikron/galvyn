@@ -9,12 +9,20 @@ use std::marker::PhantomData;
 use std::panic;
 use std::panic::Location;
 
+use galvyn::core::re_exports::axum::response::{IntoResponse, Response};
+use galvyn::core::re_exports::axum::Json;
 use galvyn::core::{GalvynRouter, Module};
+use galvyn::openapi::OpenAPI;
 use tracing::error;
 
 #[get("/index")]
 async fn test<const N: usize, T: 'static>() -> String {
     format!("<{N}, {}>", type_name::<T>())
+}
+
+#[get("/openapi")]
+async fn openapi() -> Response {
+    Json(galvyn::openapi::get_openapi()).into_response()
 }
 
 #[tokio::main]
@@ -26,7 +34,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init_modules()
         .await?
         .add_routes(GalvynRouter::new().nest("/auth", AuthModule::global().handler.as_router()))
-        .add_routes(GalvynRouter::new().handler(test::<1337, ()>(PhantomData)))
+        .add_routes(
+            GalvynRouter::new()
+                .handler(test::<1337, ()>(PhantomData))
+                .handler(openapi(PhantomData)),
+        )
         .start(SocketAddr::from_str("127.0.0.1:8080")?)
         .await?;
 
