@@ -31,4 +31,3 @@ mod macro_docs;
 pub mod openapi;
 
 pub use macro_docs::*;
-pub use swaggapi;

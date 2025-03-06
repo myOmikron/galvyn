@@ -8,7 +8,6 @@ members = [
     "./contrib/galvyn-contrib-auth",
     # "./contrib/galvyn-contrib-tracing",
     "./example/blog",
-    "./swaggapi",
 ]
 
 [workspace.dependencies]
