@@ -6,6 +6,14 @@ use schemars::schema::Schema;
 
 /// Describes the behaviour of a type implementing [`FromRequest`](axum::extract::FromRequest)
 pub trait RequestBody: ShouldBeRequestBody {
+    fn query_parameters(_generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        vec![]
+    }
+
+    fn path_parameters(_generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        vec![]
+    }
+
     fn body(_generator: &mut SchemaGenerator) -> (Mime, Option<Schema>);
 }
 
@@ -24,4 +32,12 @@ impl<T: RequestBody> HasMetadata<RequestBodyMetadata> for T {
 }
 
 impl<T: ShouldBeRequestBody> ShouldBeRequestPart for T {}
-impl<T: RequestBody> RequestPart for T {}
+impl<T: RequestBody> RequestPart for T {
+    fn path_parameters(generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        <T as RequestBody>::path_parameters(generator)
+    }
+
+    fn query_parameters(generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        <T as RequestBody>::query_parameters(generator)
+    }
+}

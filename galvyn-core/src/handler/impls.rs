@@ -17,7 +17,9 @@ use schemars::JsonSchema;
 use schemars::schema::Schema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use std::any::type_name;
 use std::borrow::Cow;
+use tracing::{debug, warn};
 
 impl ShouldBeRequestBody for String {}
 impl RequestBody for String {
@@ -66,88 +68,33 @@ impl HandlerArgument for RawForm {
 */
 impl<T> ShouldBeRequestPart for Path<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
-    // fn parameters(generator: &mut SchemaGenerator, path: &[&str]) -> Vec<Parameter> {
-    //     let Ok(schema) = gen.generate_refless::<T>() else {
-    //         warn!("Unsupported handler argument: {}", type_name::<Self>());
-    //         debug!("generate_refless::<{}>() == Err(_)", type_name::<T>());
-    //         return Vec::new();
-    //     };
-    //
-    //     match schema.schema_kind {
-    //         SchemaKind::Type(Type::Object(obj)) => obj
-    //             .properties
-    //             .into_iter()
-    //             .map(|(name, schema)| Parameter::Path {
-    //                 parameter_data: ParameterData {
-    //                     required: obj.required.contains(&name),
-    //                     name,
-    //                     description: None,
-    //                     deprecated: None,
-    //                     format: ParameterSchemaOrContent::Schema(schema.unbox()),
-    //                     example: None,
-    //                     examples: Default::default(),
-    //                     explode: None,
-    //                     extensions: Default::default(),
-    //                 },
-    //                 style: Default::default(),
-    //             })
-    //             .collect(),
-    //         _ if path.len() == 1 => {
-    //             vec![Parameter::Path {
-    //                 parameter_data: ParameterData {
-    //                     name: path[0].to_string(),
-    //                     description: None,
-    //                     required: !schema.schema_data.nullable,
-    //                     deprecated: None,
-    //                     format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(schema)),
-    //                     example: None,
-    //                     examples: Default::default(),
-    //                     explode: None,
-    //                     extensions: Default::default(),
-    //                 },
-    //                 style: Default::default(),
-    //             }]
-    //         }
-    //         _ => {
-    //             warn!("Unsupported handler argument: {}", type_name::<Self>());
-    //             debug!(
-    //                 "generate_refless::<{}>() == Ok({schema:#?})",
-    //                 type_name::<T>()
-    //             );
-    //             Vec::new()
-    //         }
-    //     }
-    // }
+    fn path_parameters(generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        let Some(obj) = generator.generate_object::<T>() else {
+            warn!("Unsupported handler argument: {}", type_name::<Self>());
+            debug!("generate_object::<{}>() == None", type_name::<T>());
+            return Vec::new();
+        };
+
+        obj.properties
+            .into_iter()
+            .map(|(name, schema)| (name, Some(schema)))
+            .collect()
+    }
 }
 
 impl<T> ShouldBeRequestPart for Query<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Query<T> {
-    // fn parameters(generator: &mut SchemaGenerator, _path: &[&str]) -> Vec<Parameter> {
-    //     let Some((obj, _)) = gen.generate_object::<T>() else {
-    //         warn!("Unsupported handler argument: {}", type_name::<Self>());
-    //         return Vec::new();
-    //     };
-    //
-    //     obj.properties
-    //         .into_iter()
-    //         .map(|(name, schema)| Parameter::Query {
-    //             parameter_data: ParameterData {
-    //                 required: obj.required.contains(&name),
-    //                 name,
-    //                 description: None,
-    //                 deprecated: None,
-    //                 format: ParameterSchemaOrContent::Schema(schema.unbox()),
-    //                 example: None,
-    //                 examples: Default::default(),
-    //                 explode: None,
-    //                 extensions: Default::default(),
-    //             },
-    //             allow_reserved: false,
-    //             style: Default::default(),
-    //             allow_empty_value: None,
-    //         })
-    //         .collect()
-    // }
+    fn query_parameters(generator: &mut SchemaGenerator) -> Vec<(String, Option<Schema>)> {
+        let Some(obj) = generator.generate_object::<T>() else {
+            warn!("Unsupported handler argument: {}", type_name::<Self>());
+            return Vec::new();
+        };
+
+        obj.properties
+            .into_iter()
+            .map(|(name, schema)| (name, Some(schema)))
+            .collect()
+    }
 }
 
 impl ShouldBeResponseBody for &'static str {}

@@ -3,8 +3,8 @@ use axum::http::Method;
 use galvyn_core::re_exports::schemars;
 use galvyn_core::schema_generator::SchemaGenerator;
 use openapiv3::{
-    Components, Info, MediaType, PathItem, Paths, ReferenceOr, RequestBody, Response, Schema,
-    SchemaKind, StatusCode,
+    Components, Info, MediaType, Parameter, ParameterData, ParameterSchemaOrContent, PathItem,
+    Paths, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode,
 };
 use std::collections::BTreeMap;
 use std::mem;
@@ -12,6 +12,7 @@ use std::sync::OnceLock;
 use tracing::{debug, warn};
 
 pub use openapiv3::OpenAPI;
+use serde_json::Error;
 
 pub fn get_openapi() -> &'static OpenAPI {
     static OPENAPI: OnceLock<OpenAPI> = OnceLock::new();
@@ -156,7 +157,24 @@ fn generate_openapi() -> OpenAPI {
                 }));
             }
             for part in &route.request_parts {
-                // TODO
+                for (name, schema) in (part.path_parameters)(&mut *gen) {
+                    operation
+                        .parameters
+                        .push(ReferenceOr::Item(Parameter::Path {
+                            parameter_data: convert_parameter(name, schema),
+                            style: Default::default(),
+                        }));
+                }
+                for (name, schema) in (part.query_parameters)(&mut *gen) {
+                    operation
+                        .parameters
+                        .push(ReferenceOr::Item(Parameter::Query {
+                            parameter_data: convert_parameter(name, schema),
+                            allow_reserved: Default::default(),
+                            style: Default::default(),
+                            allow_empty_value: Default::default(),
+                        }));
+                }
             }
             for part in &route.response_parts {
                 // TODO
@@ -204,6 +222,32 @@ fn generate_openapi() -> OpenAPI {
         security: None,
         tags: vec![],
         external_docs: None,
+        extensions: Default::default(),
+    }
+}
+
+fn convert_parameter(name: String, schema: Option<schemars::schema::Schema>) -> ParameterData {
+    ParameterData {
+        name,
+        description: None,
+        required: false,
+        deprecated: None,
+        format: ParameterSchemaOrContent::Schema(
+            schema
+                .and_then(|schema| match convert_schema(&schema) {
+                    Ok(schema) => Some(schema),
+                    Err(_) => None,
+                })
+                .unwrap_or_else(|| {
+                    ReferenceOr::Item(Schema {
+                        schema_data: Default::default(),
+                        schema_kind: SchemaKind::Any(Default::default()),
+                    })
+                }),
+        ),
+        example: None,
+        examples: Default::default(),
+        explode: None,
         extensions: Default::default(),
     }
 }
