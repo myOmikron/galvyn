@@ -5,6 +5,7 @@ pub use crate::module::*;
 
 pub mod re_exports {
     pub use axum;
+    pub use mime;
     pub use rorm;
     pub use schemars;
 }
