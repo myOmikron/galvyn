@@ -9,8 +9,8 @@ use std::mem;
 use std::net::SocketAddr;
 use std::sync::RwLock;
 use tokio::net::TcpListener;
-use tracing::info;
 use tracing::Level;
+use tracing::{debug, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
@@ -35,7 +35,11 @@ impl ModuleBuilder {
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(Level::INFO.as_str())))
             .with(tracing_subscriber::fmt::layer());
 
-        registry.init();
+        if registry.try_init().is_ok() {
+            debug!("Initialized galvyn's subscriber");
+        } else {
+            debug!("Using external subscriber");
+        }
 
         let mut this = ModuleBuilder::default();
         this.register_module::<Database>();
