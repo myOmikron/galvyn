@@ -161,7 +161,10 @@ fn generate_openapi() -> OpenAPI {
                     operation
                         .parameters
                         .push(ReferenceOr::Item(Parameter::Path {
-                            parameter_data: convert_parameter(name, schema),
+                            parameter_data: ParameterData {
+                                required: true,
+                                ..convert_parameter(name, schema)
+                            },
                             style: Default::default(),
                         }));
                 }
