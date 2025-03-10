@@ -162,7 +162,7 @@ impl GalvynRouter {
         L::Service: Service<Request> + Clone + Send + Sync + 'static,
         <L::Service as Service<Request>>::Response: IntoResponse + 'static,
         <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
-        <L::Service as Service<Request>>::Future: Send + Sync + 'static,
+        <L::Service as Service<Request>>::Future: Send + 'static,
     {
         self.router = self.router.layer(layer);
         self
@@ -177,7 +177,7 @@ impl GalvynRouter {
         L::Service: Service<Request> + Clone + Send + Sync + 'static,
         <L::Service as Service<Request>>::Response: IntoResponse + 'static,
         <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
-        <L::Service as Service<Request>>::Future: Send + Sync + 'static,
+        <L::Service as Service<Request>>::Future: Send + 'static,
     {
         self.router = self.router.route_layer(layer);
         self
