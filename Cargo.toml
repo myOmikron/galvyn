@@ -12,5 +12,5 @@ members = [
 
 [workspace.dependencies]
 axum = { version = "~0.8", default-features = false }
-rorm = { version = "*", git = "https://github.com/rorm-orm/rorm", tag = "v0.7.0-pre-2", default-features = false, features = ["postgres-only"] }
-rorm-macro-impl = { version = "*", git = "https://github.com/rorm-orm/rorm", tag = "v0.7.0-pre-2" }
+rorm = { version = "*", git = "https://github.com/rorm-orm/rorm", tag = "v0.7.0-pre-3", default-features = false, features = ["postgres-only"] }
+rorm-macro-impl = { version = "*", git = "https://github.com/rorm-orm/rorm", tag = "v0.7.0-pre-3" }
