@@ -1,7 +1,4 @@
-use std::mem;
-
 use schemars::JsonSchema;
-use schemars::Map;
 use schemars::r#gen::SchemaGenerator as InnerGenerator;
 use schemars::r#gen::SchemaSettings;
 use schemars::schema::{ObjectValidation, Schema, SchemaObject};
@@ -22,6 +19,11 @@ impl AsMut<InnerGenerator> for SchemaGenerator {
     }
 }
 impl SchemaGenerator {
+    /// Constructs a new schema generator
+    pub fn new() -> Self {
+        Self(InnerGenerator::new(SchemaSettings::openapi3()))
+    }
+
     /// Generate an openapi schema for the type `T`
     ///
     /// This might do nothing but return a reference to the schema
@@ -56,39 +58,5 @@ impl SchemaGenerator {
             }) => Some(object),
             _ => None,
         }
-    }
-
-    /// Run some code `func` with a `SchemaGenerator` modifying `&mut definitions`
-    ///
-    /// This function is used inside the page builder
-    /// when invoking [`AsResponses`](crate::as_responses::AsResponses)
-    /// and [`HandlerArgument`](crate::handler_argument::HandlerArgument).
-    ///
-    /// This builder has to be `Sync` and therefore can't contain a `InnerGenerator`
-    /// directly which is not.
-    /// (The contained `visitors` are trait objects without `Sync` bound)
-    ///
-    /// To work around this, the builder only stores `Map<String, Schema>`
-    /// and passes a `&mut` to this function to modify it.
-    ///
-    /// This requires some cleanup which is guaranteed by running a `FnOnce`
-    /// instead of giving ownership of `SchemaGenerator` directly.
-    pub fn employ<T>(
-        definitions: &mut Map<String, Schema>,
-        func: impl FnOnce(&mut Self) -> T,
-    ) -> T {
-        // Construct new empty generator
-        let mut generator = Self(InnerGenerator::new(SchemaSettings::openapi3()));
-
-        // Give the `definitions` to the generator for him to extend
-        *generator.as_mut().definitions_mut() = mem::take(definitions);
-
-        // Run the `func` with the generator
-        let output = func(&mut generator);
-
-        // Take the (potentially modified) `definitions` back
-        *definitions = generator.as_mut().take_definitions();
-
-        output
     }
 }

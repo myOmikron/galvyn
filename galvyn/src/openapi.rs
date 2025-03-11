@@ -6,13 +6,11 @@ use openapiv3::{
     Components, Info, MediaType, Parameter, ParameterData, ParameterSchemaOrContent, PathItem,
     Paths, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode,
 };
-use std::collections::BTreeMap;
 use std::mem;
 use std::sync::OnceLock;
 use tracing::{debug, warn};
 
 pub use openapiv3::OpenAPI;
-use serde_json::Error;
 
 pub fn get_openapi() -> &'static OpenAPI {
     static OPENAPI: OnceLock<OpenAPI> = OnceLock::new();
@@ -20,7 +18,7 @@ pub fn get_openapi() -> &'static OpenAPI {
 }
 
 fn generate_openapi() -> OpenAPI {
-    let mut schemas: BTreeMap<String, schemars::schema::Schema> = BTreeMap::new();
+    let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
 
     for route in get_routes() {
@@ -57,132 +55,130 @@ fn generate_openapi() -> OpenAPI {
         operation.deprecated = route.deprecated;
         operation.tags = route.tags.iter().copied().map(String::from).collect();
 
-        SchemaGenerator::employ(&mut schemas, |gen| {
-            if let Some(response_body) = route.response_body.as_ref() {
-                for (status_code, body) in (response_body.body)(gen) {
-                    // Insert status code
-                    let ReferenceOr::Item(response) = operation
-                        .responses
-                        .responses
-                        .entry(StatusCode::Code(status_code.as_u16()))
-                        .or_insert_with(|| ReferenceOr::Item(Response::default()))
-                    else {
-                        unreachable!("We only ever insert ReferenceOr::Item. See above")
-                    };
+        if let Some(response_body) = route.response_body.as_ref() {
+            for (status_code, body) in (response_body.body)(&mut schemas) {
+                // Insert status code
+                let ReferenceOr::Item(response) = operation
+                    .responses
+                    .responses
+                    .entry(StatusCode::Code(status_code.as_u16()))
+                    .or_insert_with(|| ReferenceOr::Item(Response::default()))
+                else {
+                    unreachable!("We only ever insert ReferenceOr::Item. See above")
+                };
 
-                    // Insert mime type
-                    let Some((mime, schema)) = body else {
-                        continue;
-                    };
-                    let media_type = response.content.entry(mime.to_string()).or_default();
+                // Insert mime type
+                let Some((mime, schema)) = body else {
+                    continue;
+                };
+                let media_type = response.content.entry(mime.to_string()).or_default();
 
-                    // Insert schema
-                    let Some(schema) = schema else {
+                // Insert schema
+                let Some(schema) = schema else {
+                    continue;
+                };
+                let schema = match convert_schema(&schema) {
+                    Ok(schema) => schema,
+                    Err(error) => {
+                        warn!(
+                            route.ident,
+                            reason = "Schema is not proper openapiv3",
+                            "Malformed response body schema"
+                        );
+                        debug!(
+                            route.ident,
+                            reason = "Schema is not proper openapiv3",
+                            error.display = %error,
+                            error.debug = ?error,
+                            "Malformed response body schema"
+                        );
                         continue;
-                    };
-                    let schema = match convert_schema(&schema) {
-                        Ok(schema) => schema,
-                        Err(error) => {
-                            warn!(
-                                route.ident,
-                                reason = "Schema is not proper openapiv3",
-                                "Malformed response body schema"
-                            );
-                            debug!(
-                                route.ident,
-                                reason = "Schema is not proper openapiv3",
-                                error.display = %error,
-                                error.debug = ?error,
-                                "Malformed response body schema"
-                            );
-                            continue;
-                        }
-                    };
-                    match &mut media_type.schema {
-                        // We add the 1st schema
-                        None => media_type.schema = Some(schema),
-                        // We add the 3rd or further schema
-                        Some(ReferenceOr::Item(Schema {
-                            schema_data: _,
-                            schema_kind: SchemaKind::OneOf { one_of },
-                        })) => {
-                            one_of.push(schema);
-                        }
-                        // We add the 2nd schema
-                        Some(schema_slot) => {
-                            let other_schema = mem::replace(
-                                schema_slot,
-                                ReferenceOr::Reference {
-                                    reference: String::new(),
-                                },
-                            );
-                            *schema_slot = ReferenceOr::Item(Schema {
-                                schema_data: Default::default(),
-                                schema_kind: SchemaKind::OneOf {
-                                    one_of: vec![other_schema, schema],
-                                },
-                            });
-                        }
-                    };
-                }
-            }
-            if let Some(request_body) = route.request_body.as_ref() {
-                let (mime, schema) = (request_body.body)(gen);
-                operation.request_body = Some(ReferenceOr::Item(RequestBody {
-                    content: FromIterator::from_iter([(
-                        mime.to_string(),
-                        MediaType {
-                            schema: schema.as_ref().map(convert_schema).and_then(|result| {
-                                result
-                                    .inspect_err(|error| {
-                                        warn!(
-                                            route.ident,
-                                            reason = "Schema is not proper openapiv3",
-                                            "Malformed request body schema"
-                                        );
-                                        debug!(
-                                            route.ident,
-                                            reason = "Schema is not proper openapiv3",
-                                            error.display = %error,
-                                            error.debug = ?error,
-                                            "Malformed request body schema"
-                                        );
-                                    })
-                                    .ok()
-                            }),
-                            ..Default::default()
-                        },
-                    )]),
-                    ..Default::default()
-                }));
-            }
-            for part in &route.request_parts {
-                for (name, schema) in (part.path_parameters)(&mut *gen) {
-                    operation
-                        .parameters
-                        .push(ReferenceOr::Item(Parameter::Path {
-                            parameter_data: ParameterData {
-                                required: true,
-                                ..convert_parameter(name, schema)
+                    }
+                };
+                match &mut media_type.schema {
+                    // We add the 1st schema
+                    None => media_type.schema = Some(schema),
+                    // We add the 3rd or further schema
+                    Some(ReferenceOr::Item(Schema {
+                        schema_data: _,
+                        schema_kind: SchemaKind::OneOf { one_of },
+                    })) => {
+                        one_of.push(schema);
+                    }
+                    // We add the 2nd schema
+                    Some(schema_slot) => {
+                        let other_schema = mem::replace(
+                            schema_slot,
+                            ReferenceOr::Reference {
+                                reference: String::new(),
                             },
-                            style: Default::default(),
-                        }));
-                }
-                for (name, schema) in (part.query_parameters)(&mut *gen) {
-                    operation
-                        .parameters
-                        .push(ReferenceOr::Item(Parameter::Query {
-                            parameter_data: convert_parameter(name, schema),
-                            allow_reserved: Default::default(),
-                            style: Default::default(),
-                            allow_empty_value: Default::default(),
-                        }));
-                }
+                        );
+                        *schema_slot = ReferenceOr::Item(Schema {
+                            schema_data: Default::default(),
+                            schema_kind: SchemaKind::OneOf {
+                                one_of: vec![other_schema, schema],
+                            },
+                        });
+                    }
+                };
             }
-            for part in &route.response_parts {
-                // TODO
+        }
+        if let Some(request_body) = route.request_body.as_ref() {
+            let (mime, schema) = (request_body.body)(&mut schemas);
+            operation.request_body = Some(ReferenceOr::Item(RequestBody {
+                content: FromIterator::from_iter([(
+                    mime.to_string(),
+                    MediaType {
+                        schema: schema.as_ref().map(convert_schema).and_then(|result| {
+                            result
+                                .inspect_err(|error| {
+                                    warn!(
+                                        route.ident,
+                                        reason = "Schema is not proper openapiv3",
+                                        "Malformed request body schema"
+                                    );
+                                    debug!(
+                                        route.ident,
+                                        reason = "Schema is not proper openapiv3",
+                                        error.display = %error,
+                                        error.debug = ?error,
+                                        "Malformed request body schema"
+                                    );
+                                })
+                                .ok()
+                        }),
+                        ..Default::default()
+                    },
+                )]),
+                ..Default::default()
+            }));
+        }
+        for part in &route.request_parts {
+            for (name, schema) in (part.path_parameters)(&mut schemas) {
+                operation
+                    .parameters
+                    .push(ReferenceOr::Item(Parameter::Path {
+                        parameter_data: ParameterData {
+                            required: true,
+                            ..convert_parameter(name, schema)
+                        },
+                        style: Default::default(),
+                    }));
             }
-        });
+            for (name, schema) in (part.query_parameters)(&mut schemas) {
+                operation
+                    .parameters
+                    .push(ReferenceOr::Item(Parameter::Query {
+                        parameter_data: convert_parameter(name, schema),
+                        allow_reserved: Default::default(),
+                        style: Default::default(),
+                        allow_empty_value: Default::default(),
+                    }));
+            }
+        }
+        for part in &route.response_parts {
+            // TODO
+        }
     }
 
     OpenAPI {
@@ -200,9 +196,11 @@ fn generate_openapi() -> OpenAPI {
         paths,
         components: Some(Components {
             schemas: schemas
-                .into_iter()
-                .filter_map(|(key, schema)| match convert_schema(&schema) {
-                    Ok(schema) => Some((key, schema)),
+                .as_ref()
+                .definitions()
+                .iter()
+                .filter_map(|(key, schema)| match convert_schema(schema) {
+                    Ok(schema) => Some((key.clone(), schema)),
                     Err(error) => {
                         warn!(
                             schema = key,
