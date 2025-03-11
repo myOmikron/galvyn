@@ -78,9 +78,7 @@ impl SchemaGenerator {
         func: impl FnOnce(&mut Self) -> T,
     ) -> T {
         // Construct new empty generator
-        let mut settings = SchemaSettings::openapi3();
-        settings.visitors = Vec::new();
-        let mut generator = Self(InnerGenerator::new(settings));
+        let mut generator = Self(InnerGenerator::new(SchemaSettings::openapi3()));
 
         // Give the `definitions` to the generator for him to extend
         *generator.as_mut().definitions_mut() = mem::take(definitions);
