@@ -26,6 +26,8 @@ pub use crate::galvyn::*;
 
 pub mod error;
 mod galvyn;
+#[cfg(feature = "graceful-shutdown")]
+mod graceful_shutdown;
 mod macro_docs;
 #[cfg(feature = "openapi")]
 pub mod openapi;

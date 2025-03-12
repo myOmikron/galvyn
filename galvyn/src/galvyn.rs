@@ -81,7 +81,14 @@ impl RouterBuilder {
         let socket = TcpListener::bind(socket_addr).await?;
 
         info!("Starting to serve webserver on http://{socket_addr}");
-        axum::serve(socket, router.layer(session::layer())).await?;
+        let serve_future = axum::serve(socket, router.layer(session::layer()));
+
+        debug!("Registering signals for graceful shutdown");
+        #[cfg(feature = "graceful-shutdown")]
+        let serve_future =
+            serve_future.with_graceful_shutdown(crate::graceful_shutdown::wait_for_signal()?);
+
+        serve_future.await?;
 
         Ok(())
     }
