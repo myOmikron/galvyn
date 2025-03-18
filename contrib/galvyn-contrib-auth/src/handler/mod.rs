@@ -1,6 +1,6 @@
 use crate::handler::schema::{
     GetLoginFlowsRequest, GetLoginFlowsResponse, LocalLoginFlow, LoginLocalPasswordRequest,
-    LoginLocalWebauthnRequest, OidcLoginFlow, PublicKeyCredential,
+    LoginLocalWebauthnRequest, OidcLoginFlow, PublicKeyCredential, RequestChallengeResponse,
 };
 use crate::module::AuthModule;
 use crate::{Account, MaybeAttestedPasskey};
@@ -8,13 +8,13 @@ use galvyn_core::re_exports::axum::extract::Query;
 
 use galvyn_core::re_exports::axum::Json;
 use galvyn_core::session::Session;
-use galvyn_core::stuff::api_error::ApiResult;
+use galvyn_core::stuff::api_error::{ApiError, ApiResult};
 use galvyn_core::Module;
 use galvyn_macros::{get, post};
 
 use crate::models::{LocalAccount, OidcAccount, WebAuthnKey};
 use serde::{Deserialize, Serialize};
-use webauthn_rs::prelude::{AttestedPasskeyAuthentication, RequestChallengeResponse};
+use webauthn_rs::prelude::AttestedPasskeyAuthentication;
 
 #[cfg(feature = "oidc")]
 mod oidc;
@@ -64,7 +64,7 @@ pub async fn get_login_flow(
                 webauthn,
             })
         }
-        _ => return Err("Invalid account".into()),
+        _ => return Err(ApiError::server_error("Invalid account")),
     };
 
     tx.commit().await?;
@@ -82,13 +82,13 @@ pub async fn login_local_webauthn(
         .condition(Account.id.equals(&request.identifier))
         .optional()
         .await?
-        .ok_or("Account not found")?;
+        .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
         .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
-        .ok_or("Not a local account")?;
+        .ok_or(ApiError::bad_request("Not a local account"))?;
 
     let keys = rorm::query(&mut tx, WebAuthnKey.key)
         .condition(WebAuthnKey.local_account.equals(&local_account_pk))
@@ -104,7 +104,10 @@ pub async fn login_local_webauthn(
 
     let (challenge, state) = AuthModule::global()
         .webauthn
-        .start_attested_passkey_authentication(&keys)?;
+        .start_attested_passkey_authentication(&keys)
+        .map_err(ApiError::map_server_error(
+            "Failed to start webauthn challenge",
+        ))?;
 
     tx.commit().await?;
 
@@ -118,7 +121,7 @@ pub async fn login_local_webauthn(
         )
         .await?;
 
-    Ok(Json(challenge))
+    Ok(Json(RequestChallengeResponse(challenge)))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -135,11 +138,14 @@ pub async fn finish_login_local_webauthn(
     let LoginLocalWebauthnSessionData { identifier, state } = session
         .remove("login_local_webauthn")
         .await?
-        .ok_or("Bad Request")?;
+        .ok_or(ApiError::bad_request("No ongoing challenge"))?;
 
     let authentication_result = AuthModule::global()
         .webauthn
-        .finish_attested_passkey_authentication(&request.0, &state)?;
+        .finish_attested_passkey_authentication(&request.0, &state)
+        .map_err(ApiError::map_server_error(
+            "Failed to finish webauthn challenge",
+        ))?;
 
     let mut tx = AuthModule::global().db.start_transaction().await?;
 
@@ -147,13 +153,13 @@ pub async fn finish_login_local_webauthn(
         .condition(Account.id.equals(&identifier))
         .optional()
         .await?
-        .ok_or("Account not found")?;
+        .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
         .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
-        .ok_or("Not a local account")?;
+        .ok_or(ApiError::bad_request("Not a local account"))?;
 
     let keys = rorm::query(&mut tx, WebAuthnKey.key)
         .condition(WebAuthnKey.local_account.equals(&local_account_pk))
@@ -167,7 +173,7 @@ pub async fn finish_login_local_webauthn(
                 (key.cred_id() == authentication_result.cred_id()).then_some(key)
             }
         })
-        .ok_or("Used unknown key")?;
+        .ok_or(ApiError::bad_request("Used unknown key"))?;
 
     tx.commit().await?;
 
@@ -187,18 +193,19 @@ pub async fn login_local_password(
         .condition(Account.id.equals(&request.identifier))
         .optional()
         .await?
-        .ok_or("Account not found")?;
+        .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_password = rorm::query(&mut tx, LocalAccount.password)
         .condition(LocalAccount.account.equals(&account_pk))
         .optional()
         .await?
-        .ok_or("Not a local account")?;
+        .ok_or(ApiError::bad_request("Not a local account"))?;
 
-    let local_account_password = local_account_password.ok_or("Account has no password")?;
+    let local_account_password =
+        local_account_password.ok_or(ApiError::bad_request("Account has no password"))?;
     // TODO: hashing
     if local_account_password != request.password {
-        return Err("Passwords do not match".into());
+        return Err(ApiError::bad_request("Passwords do not match"));
     }
 
     // TODO: 2nd factor

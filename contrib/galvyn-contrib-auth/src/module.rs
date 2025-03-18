@@ -98,7 +98,7 @@ impl Module for AuthModule {
     type PreInit = (OidcClient, Webauthn, AttestationCaList);
 
     fn pre_init(
-        setup: Self::Setup,
+        AuthSetup { private: () }: Self::Setup,
     ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
         async move {
             let auth_config: AuthConfig = envy::from_env()?;
