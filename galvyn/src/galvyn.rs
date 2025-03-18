@@ -1,6 +1,5 @@
 use crate::core::Module;
 use crate::error::GalvynError;
-use galvyn_core::re_exports::rorm::Database;
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::MutHandlerMeta;
 use galvyn_core::session;
@@ -41,14 +40,12 @@ impl ModuleBuilder {
             debug!("Using external subscriber");
         }
 
-        let mut this = ModuleBuilder::default();
-        this.register_module::<Database>();
-        this
+        ModuleBuilder::default()
     }
 
     /// Register a module
-    pub fn register_module<T: Module>(&mut self) -> &mut Self {
-        self.modules.register_module::<T>();
+    pub fn register_module<T: Module>(&mut self, setup: T::Setup) -> &mut Self {
+        self.modules.register_module::<T>(setup);
         self
     }
 

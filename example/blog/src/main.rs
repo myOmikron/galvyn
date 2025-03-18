@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 
 use galvyn::contrib::auth::AuthModule;
+use galvyn::rorm::Database;
 use galvyn::{get, Galvyn};
 use std::any::Any;
 use std::panic;
@@ -28,7 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing_panic_hook();
 
     Galvyn::new()
-        .register_module::<AuthModule>()
+        .register_module::<Database>(Default::default())
+        .register_module::<AuthModule>(Default::default())
         .init_modules()
         .await?
         .add_routes(GalvynRouter::new().nest("/auth", AuthModule::global().handler.as_router()))

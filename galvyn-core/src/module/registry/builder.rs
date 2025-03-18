@@ -30,7 +30,7 @@ impl RegistryBuilder {
     ///
     /// Calling this method twice with the same `T` is not an error but will only add it once.
     #[instrument(level = "trace", name = "RegistryBuilder::register_module", skip(self), fields(module.name = type_name::<T>()))]
-    pub fn register_module<T: Module>(&mut self) -> &mut Self {
+    pub fn register_module<T: Module>(&mut self, setup: T::Setup) -> &mut Self {
         if self.contains_module(TypeId::of::<T>()) {
             panic!(
                 "The module '{}' is being registered twice",
@@ -48,10 +48,10 @@ impl RegistryBuilder {
 
             self.modules.push((
                 TypeId::of::<T>(),
-                Box::new(|| {
+                BoxDynFnOnce::new(move |()| {
                     tokio::spawn(async {
                         let pre_init = async move {
-                            let result = T::pre_init().await;
+                            let result = T::pre_init(setup).await;
                             match &result {
                                 Ok(_) => trace!("Finished pre init"),
                                 Err(_) => trace!("Failed pre init"),
@@ -110,7 +110,7 @@ impl RegistryBuilder {
         let pre_init_modules = process_join_results(
             self.modules
                 .drain(..)
-                .map(|(_, x)| x())
+                .map(|(_, x)| x.call(()))
                 .collect::<Vec<_>>()
                 .join()
                 .await,
@@ -185,7 +185,7 @@ impl fmt::Display for InitError {
 impl Error for InitError {}
 
 /// An uninitialised module waiting to be pre-initialised
-type UninitModule = Box<dyn Fn() -> JoinHandle<Result<PreInitModule, module::PreInitError>>>;
+type UninitModule = BoxDynFnOnce<(), JoinHandle<Result<PreInitModule, module::PreInitError>>>;
 
 /// A pre-initialised modules waiting to be initialised
 type PreInitModule =

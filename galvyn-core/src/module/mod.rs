@@ -5,6 +5,7 @@
 use crate::module::registry::{ModuleDependencies, Registry};
 use std::any::type_name;
 use std::error::Error;
+use std::fmt;
 use std::future::Future;
 use thiserror::Error;
 
@@ -47,6 +48,16 @@ pub mod registry;
 ///
 /// Modules which others depend on have been made aware of their dependents and may run some finishing initialization code.
 pub trait Module: Sized + Send + Sync + 'static {
+    /// A type which is constructed by an application author to declare how this module should configure itself.
+    ///
+    /// This type should be constructed in a semi-constant fashion by the application author.
+    /// It should not be constructed from configuration
+    /// (things a sysadmin would tweak during the deployment).
+    /// Instead, it should declare how the sysadmin is able to configure the module.
+    ///
+    /// If your module doesn't need to support different setups then `()` would be a good default.
+    type Setup: fmt::Debug + Default + Sized + Send + Sync + 'static;
+
     /// Arbitrary data passed from the `pre_init` step to `init`
     ///
     /// No code external to a module's implementation should depend on this type.
@@ -60,7 +71,9 @@ pub trait Module: Sized + Send + Sync + 'static {
     /// (see [Module Pre Init](Module#pre_init))
     ///
     /// If your module doesn't need any `pre_init` logic then `async { Ok(()) }` would be a good default.
-    fn pre_init() -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send;
+    fn pre_init(
+        setup: Self::Setup,
+    ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send;
 
     /// A tuple of [`Module`]s which need to be initialized before this one.
     type Dependencies: ModuleDependencies;

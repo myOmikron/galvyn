@@ -26,6 +26,11 @@ pub struct AuthModule {
     pub(crate) attestation_ca_list: AttestationCaList,
 }
 
+#[derive(Debug, Default)]
+pub struct AuthSetup {
+    private: (),
+}
+
 #[non_exhaustive]
 pub struct AuthHandler {
     pub get_login_flow: handler::get_login_flow,
@@ -88,9 +93,13 @@ impl AuthHandler {
 }
 
 impl Module for AuthModule {
+    type Setup = AuthSetup;
+
     type PreInit = (OidcClient, Webauthn, AttestationCaList);
 
-    fn pre_init() -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
+    fn pre_init(
+        setup: Self::Setup,
+    ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
         async move {
             let auth_config: AuthConfig = envy::from_env()?;
 
