@@ -8,10 +8,13 @@ description = "Core-component for the galvyn web-framework"
 
 [dependencies]
 # Webserver
-axum = { workspace = true, default-features = false, features = ["tokio", "http1"] }
+axum = { workspace = true, features = ["tokio", "http1"] }
 
 # Core
 galvyn-core = { version = "~0.1", path = "../galvyn-core" }
+
+# Database
+rorm = { workspace = true }
 
 # Contrib modules
 # galvyn-contrib-tracing = { version = "~0.1", path = "../contrib/galvyn-contrib-tracing", optional = true }
@@ -40,6 +43,7 @@ signal-hook-tokio = { version = "~0.3", features = ["futures-v0_3"], optional = 
 
 [features]
 default = [
+    "rorm-default",
     "openapi",
     "graceful-shutdown",
 ]
@@ -53,3 +57,53 @@ openapi = [
 ]
 # Enables a graceful shutdown upon receiving a termination signal
 graceful-shutdown = ["dep:signal-hook", "dep:signal-hook-tokio"]
+
+# ------------- #
+# Rorm features #
+# ------------- #
+
+# Collection of all rorm features galvyn considers "default"
+rorm-default = [
+    "rorm-postgres-only",
+    "rorm-time",
+    "rorm-uuid",
+    "rorm-url",
+    "rorm-schemars",
+    "rorm-cli",
+]
+
+# Enables postgres specific features, disabling the other databases
+rorm-postgres-only = ["rorm/postgres-only"]
+
+# Enables all databases at the cost of postgres specific features
+rorm-all-drivers = ["rorm/all-drivers"]
+
+# Implements FieldType for chrono's types
+rorm-chrono = ["rorm/chrono"]
+
+# Implements FieldType for time's types
+rorm-time = ["rorm/time"]
+
+# Implements FieldType for Uuid type
+rorm-uuid = ["rorm/uuid"]
+
+# Implements FieldType for Url type
+rorm-url = ["rorm/url"]
+
+# Implements ToSchema for some rorm-specific types
+rorm-utoipa = ["rorm/utoipa"]
+
+# Implements JsonSchema for some rorm-specific types
+rorm-schemars = ["rorm/schemars"]
+
+# Adds MsgPack type to store arbitrary serde compatible data using the message pack format
+rorm-msgpack = ["rorm/msgpack"]
+
+# Re-exports rorm's cli i.e. the command to generate and apply migrations
+rorm-cli = ["rorm/cli"]
+
+# Enables connecting to the database over tls support using rustls
+rorm-rustls = ["rorm/rustls"]
+
+# Enables connecting to the database over tls support using native-tls
+rorm-native-tls = ["rorm/native-tls"]
