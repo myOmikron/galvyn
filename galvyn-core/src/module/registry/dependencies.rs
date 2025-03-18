@@ -1,15 +1,14 @@
 #![allow(private_interfaces)]
 
-use crate::module::registry::builder::RegistryBuilder;
-use crate::module::registry::module_set::OwnedModulesSet;
 use crate::module::Module;
+use crate::module::registry::module_set::OwnedModulesSet;
 use crate::util_macros::impl_tuples;
-use std::any::type_name;
+use std::any::{TypeId, type_name};
 
 /// A tuple of [`Module`]s which need to be initialized before another one which depends on them.
 pub trait ModuleDependencies: Sized + Send + Sync + 'static {
     #[doc(hidden)]
-    fn register(builder: &mut RegistryBuilder);
+    fn for_each(func: impl FnMut(TypeId, &'static str));
 
     #[doc(hidden)]
     fn take(modules: &mut OwnedModulesSet) -> Self;
@@ -21,9 +20,11 @@ pub trait ModuleDependencies: Sized + Send + Sync + 'static {
 macro_rules! impl_module_dependencies {
     ($($T:ident),+) => {
         impl<$( $T: Module, )+> ModuleDependencies for ($( $T, )+) {
-            fn register(builder: &mut RegistryBuilder) {$(
-                builder.register_module::<$T>();
-            )+}
+            fn for_each(mut func: impl FnMut(TypeId, &'static str)) {
+                $(
+                    func(TypeId::of::<$T>(), type_name::<$T>());
+                )*
+            }
 
             fn take(modules: &mut OwnedModulesSet) -> Self {
                 ($(
@@ -45,7 +46,7 @@ macro_rules! impl_module_dependencies {
 }
 impl_tuples!(impl_module_dependencies);
 impl ModuleDependencies for () {
-    fn register(_builder: &mut RegistryBuilder) {}
+    fn for_each(_func: impl FnMut(TypeId, &'static str)) {}
 
     fn take(_modules: &mut OwnedModulesSet) -> Self {
         ()
