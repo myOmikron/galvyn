@@ -31,5 +31,7 @@ mod graceful_shutdown;
 mod macro_docs;
 #[cfg(feature = "openapi")]
 pub mod openapi;
+#[cfg(feature = "panic-hook")]
+pub mod panic_hook;
 
 pub use macro_docs::*;

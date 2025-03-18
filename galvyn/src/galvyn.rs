@@ -30,6 +30,9 @@ pub struct ModuleBuilder {
 
 impl ModuleBuilder {
     fn new() -> ModuleBuilder {
+        #[cfg(feature = "panic-hook")]
+        crate::panic_hook::set_panic_hook();
+
         let registry = tracing_subscriber::registry()
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(Level::INFO.as_str())))
             .with(tracing_subscriber::fmt::layer());
