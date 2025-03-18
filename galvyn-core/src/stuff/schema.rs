@@ -2,13 +2,13 @@
 
 use std::borrow::Cow;
 
-use schemars::gen::SchemaGenerator;
+use schemars::JsonSchema;
+use schemars::JsonSchema_repr;
+use schemars::r#gen::SchemaGenerator;
 use schemars::schema::InstanceType;
 use schemars::schema::Metadata;
 use schemars::schema::Schema;
 use schemars::schema::SchemaObject;
-use schemars::JsonSchema;
-use schemars::JsonSchema_repr;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
@@ -169,8 +169,8 @@ impl<T> JsonSchema for SchemaString<T> {
         <String as JsonSchema>::schema_id()
     }
 
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        <String as JsonSchema>::json_schema(gen)
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        <String as JsonSchema>::json_schema(generator)
     }
 }
 
