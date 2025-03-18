@@ -12,12 +12,16 @@ axum = { workspace = true, default-features = false, features = ["query", "form"
 bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { version = "~1" }
-schemars = { version = "~0.8" }
+serde_json = { version = "~1" }
+serde_repr = { version = "~0.1" }
+schemars = { version = "~0.8", features = ["uuid1"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }
 tracing = { version = "~0.1" }
 thiserror = "~2"
 rorm = { workspace = true, features = ["time"] }
+uuid = { version = "~1", features = ["v4", "serde"] }
+time = { version = "~0.3" }
 
 # TODO: maybe roll our own?
 tower-sessions = { version = "~0.14" }
