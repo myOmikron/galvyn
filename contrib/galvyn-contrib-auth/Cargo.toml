@@ -10,6 +10,10 @@ description = "Authentication methods for galvyn"
 galvyn-core = { version = "*", path = "../../galvyn-core" }
 galvyn-macros = { version = "*", path = "../../galvyn-macros" }
 
+uuid = { version = "~1" }
+
+tracing = { version = "~0.1" }
+
 schemars = { version = "~0.8" }
 
 rorm = { workspace = true }
@@ -18,7 +22,7 @@ rorm = { workspace = true }
 envy = { version = "~0.4" }
 
 # oidc
-openidconnect = { version = "~3", features = ["accept-rfc3339-timestamps"] }
+openidconnect = { version = "~4", features = ["accept-rfc3339-timestamps", "timing-resistant-secret-traits"] }
 
 # password hashing
 argon2 = { version = "~0.5", features = ["std"] }
