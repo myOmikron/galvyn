@@ -1,13 +1,14 @@
-use rorm::fields::types::Json;
+use rorm::fields::types::{Json, MaxStr};
 use rorm::prelude::ForeignModel;
 use rorm::Model;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use webauthn_rs::prelude::{AttestedPasskey, Passkey};
 
 #[derive(Model)]
 pub struct Account {
-    #[rorm(id)]
-    pub pk: i64,
+    #[rorm(primary_key)]
+    pub uuid: Uuid,
 
     #[rorm(unique, max_length = 255)]
     pub id: String,
@@ -15,30 +16,33 @@ pub struct Account {
 
 #[derive(Model)]
 pub struct OidcAccount {
-    #[rorm(id)]
-    pub pk: i64,
+    #[rorm(primary_key)]
+    pub uuid: Uuid,
 
-    #[rorm(max_length = 255)]
-    pub id: String,
+    pub issuer: MaxStr<255>,
 
+    pub subject: MaxStr<255>,
+
+    #[rorm(on_delete = "Cascade", on_update = "Cascade")]
     pub account: ForeignModel<Account>,
 }
 
 #[derive(Model)]
 pub struct LocalAccount {
-    #[rorm(id)]
-    pub pk: i64,
+    #[rorm(primary_key)]
+    pub uuid: Uuid,
 
     #[rorm(max_length = 1024)]
     pub password: Option<String>,
 
+    #[rorm(on_delete = "Cascade", on_update = "Cascade")]
     pub account: ForeignModel<Account>,
 }
 
 #[derive(Model)]
 pub struct TotpKey {
-    #[rorm(id)]
-    pub pk: i64,
+    #[rorm(primary_key)]
+    pub uuid: Uuid,
 
     #[rorm(on_delete = "Cascade", on_update = "Cascade")]
     pub local_account: ForeignModel<LocalAccount>,
@@ -52,8 +56,8 @@ pub struct TotpKey {
 
 #[derive(Model)]
 pub struct WebAuthnKey {
-    #[rorm(id)]
-    pub pk: i64,
+    #[rorm(primary_key)]
+    pub uuid: Uuid,
 
     #[rorm(on_delete = "Cascade", on_update = "Cascade")]
     pub local_account: ForeignModel<LocalAccount>,
