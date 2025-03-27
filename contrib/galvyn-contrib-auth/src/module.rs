@@ -1,9 +1,7 @@
 use crate::handler;
+use crate::logic;
 use galvyn_core::{GalvynRouter, InitError, Module, PreInitError};
 #[cfg(feature = "oidc")]
-use openidconnect::core::{CoreClient as OidcClient, CoreProviderMetadata};
-#[cfg(feature = "oidc")]
-use openidconnect::reqwest::async_http_client;
 use openidconnect::{ClientId, ClientSecret, IssuerUrl};
 use rorm::Database;
 use serde::{Deserialize, Serialize};
@@ -13,15 +11,12 @@ use std::{fs, io};
 use webauthn_rs::prelude::{AttestationCaList, Url};
 use webauthn_rs::{Webauthn, WebauthnBuilder};
 
-#[cfg(not(feature = "oidc"))]
-type OidcClient = ();
-
 /// The authentication module provides the state required by the authentication handlers
 pub struct AuthModule {
     pub handler: AuthHandler,
     pub(crate) db: Database,
     #[cfg_attr(not(feature = "oidc"), allow(unused))]
-    pub(crate) oidc: OidcClient,
+    pub(crate) oidc: logic::oidc::Client,
     pub(crate) webauthn: Webauthn,
     pub(crate) attestation_ca_list: AttestationCaList,
 }
@@ -31,40 +26,30 @@ pub struct AuthSetup {
     private: (),
 }
 
+#[derive(Default, Copy, Clone)]
 #[non_exhaustive]
 pub struct AuthHandler {
-    pub get_login_flow: handler::get_login_flow,
-    pub logout: handler::logout,
+    pub logout: handler::core::logout,
 
     #[cfg(feature = "oidc")]
-    pub login_oidc: handler::login_oidc,
+    pub login_oidc: handler::oidc::login_oidc,
     #[cfg(feature = "oidc")]
-    pub finish_login_oidc: handler::finish_login_oidc,
-    #[cfg(not(feature = "oidc"))]
-    #[allow(unused)]
-    login_oidc: (),
-    #[cfg(not(feature = "oidc"))]
-    #[allow(unused)]
-    finish_login_oidc: (),
+    pub finish_login_oidc: handler::oidc::finish_login_oidc,
 
-    pub login_local_webauthn: handler::login_local_webauthn,
-    pub finish_login_local_webauthn: handler::finish_login_local_webauthn,
-    pub login_local_password: handler::login_local_password,
-    pub set_local_password: handler::set_local_password,
-    pub delete_local_password: handler::delete_local_password,
+    pub login_local_webauthn: handler::local::login_local_webauthn,
+    pub finish_login_local_webauthn: handler::local::finish_login_local_webauthn,
+    pub login_local_password: handler::local::login_local_password,
+    pub set_local_password: handler::local::set_local_password,
+    pub delete_local_password: handler::local::delete_local_password,
 }
-
-impl Clone for AuthHandler {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl Copy for AuthHandler {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthConfig {
+    #[cfg(feature = "oidc")]
     pub oidc_issuer_url: IssuerUrl,
+    #[cfg(feature = "oidc")]
     pub oidc_client_id: ClientId,
+    #[cfg(feature = "oidc")]
     pub oidc_client_secret: ClientSecret,
 
     pub webauthn_id: String,
@@ -75,7 +60,6 @@ pub struct AuthConfig {
 impl AuthHandler {
     pub fn as_router(&self) -> GalvynRouter {
         let router = GalvynRouter::new()
-            .handler(self.get_login_flow)
             .handler(self.logout)
             .handler(self.login_local_webauthn)
             .handler(self.finish_login_local_webauthn)
@@ -95,7 +79,7 @@ impl AuthHandler {
 impl Module for AuthModule {
     type Setup = AuthSetup;
 
-    type PreInit = (OidcClient, Webauthn, AttestationCaList);
+    type PreInit = (logic::oidc::Client, Webauthn, AttestationCaList);
 
     fn pre_init(
         AuthSetup { private: () }: Self::Setup,
@@ -106,16 +90,13 @@ impl Module for AuthModule {
             #[cfg(not(feature = "oidc"))]
             let oidc = ();
             #[cfg(feature = "oidc")]
-            let oidc = OidcClient::from_provider_metadata(
-                CoreProviderMetadata::discover_async(
-                    auth_config.oidc_issuer_url,
-                    async_http_client,
-                )
-                .await?,
-                auth_config.oidc_client_id,
-                Some(auth_config.oidc_client_secret),
-            );
-            // TODO: can't set redirect uri before application author mounted our handler to its router :(
+            let oidc = logic::oidc::Client::discover(logic::oidc::Config {
+                url: auth_config.oidc_issuer_url,
+                client_id: auth_config.oidc_client_id,
+                client_secret: auth_config.oidc_client_secret,
+                redirect_url: (|| todo!())(),
+            })
+            .await?;
 
             let webauthn =
                 WebauthnBuilder::new(&auth_config.webauthn_id, &auth_config.webauthn_origin)?
@@ -139,19 +120,7 @@ impl Module for AuthModule {
             oidc,
             webauthn,
             attestation_ca_list,
-            handler: AuthHandler {
-                get_login_flow: Default::default(),
-                logout: Default::default(),
-
-                login_oidc: Default::default(),
-                finish_login_oidc: Default::default(),
-
-                login_local_webauthn: Default::default(),
-                finish_login_local_webauthn: Default::default(),
-                login_local_password: Default::default(),
-                set_local_password: Default::default(),
-                delete_local_password: Default::default(),
-            },
+            handler: AuthHandler::default(),
         }))
     }
 }
