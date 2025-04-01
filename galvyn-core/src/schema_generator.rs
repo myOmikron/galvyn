@@ -1,7 +1,9 @@
 use schemars::JsonSchema;
 use schemars::r#gen::SchemaGenerator as InnerGenerator;
 use schemars::r#gen::SchemaSettings;
-use schemars::schema::{ObjectValidation, Schema, SchemaObject};
+use schemars::schema::ObjectValidation;
+use schemars::schema::Schema;
+use schemars::schema::SchemaObject;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
@@ -21,7 +23,11 @@ impl AsMut<InnerGenerator> for SchemaGenerator {
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {
-        Self(InnerGenerator::new(SchemaSettings::openapi3()))
+        Self(InnerGenerator::new(SchemaSettings {
+            option_add_null_type: false,
+            option_nullable: true,
+            ..SchemaSettings::openapi3()
+        }))
     }
 
     /// Generate an openapi schema for the type `T`
