@@ -23,11 +23,11 @@ impl AsMut<InnerGenerator> for SchemaGenerator {
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {
-        Self(InnerGenerator::new(SchemaSettings {
-            option_add_null_type: false,
-            option_nullable: true,
-            ..SchemaSettings::openapi3()
-        }))
+        let mut settings = SchemaSettings::openapi3();
+        settings.option_nullable = true;
+        settings.option_add_null_type = false;
+
+        Self(InnerGenerator::new(settings))
     }
 
     /// Generate an openapi schema for the type `T`
