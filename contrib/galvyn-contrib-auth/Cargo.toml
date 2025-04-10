@@ -16,7 +16,7 @@ tracing = { version = "~0.1" }
 
 schemars = { version = "~0.8" }
 
-rorm = { workspace = true }
+rorm = { workspace = true, features = ["uuid"] }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
