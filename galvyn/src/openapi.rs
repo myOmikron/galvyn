@@ -196,8 +196,7 @@ fn generate_openapi() -> OpenAPI {
         paths,
         components: Some(Components {
             schemas: schemas
-                .as_ref()
-                .definitions()
+                .into_definitions()
                 .iter()
                 .filter_map(|(key, schema)| match convert_schema(schema) {
                     Ok(schema) => Some((key.clone(), schema)),

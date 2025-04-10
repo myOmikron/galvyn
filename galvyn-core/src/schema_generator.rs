@@ -1,7 +1,9 @@
-use schemars::JsonSchema;
 use schemars::r#gen::SchemaGenerator as InnerGenerator;
 use schemars::r#gen::SchemaSettings;
-use schemars::schema::{ObjectValidation, Schema, SchemaObject};
+use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject, SingleOrVec};
+use schemars::visit::{Visitor, visit_schema_object};
+use schemars::{JsonSchema, Map};
+use serde_json::Value;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
@@ -21,7 +23,9 @@ impl AsMut<InnerGenerator> for SchemaGenerator {
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {
-        Self(InnerGenerator::new(SchemaSettings::openapi3()))
+        let mut settings = SchemaSettings::openapi3();
+        settings.visitors.push(Box::new(ReplaceNullType));
+        Self(InnerGenerator::new(settings))
     }
 
     /// Generate an openapi schema for the type `T`
@@ -29,7 +33,11 @@ impl SchemaGenerator {
     /// This might do nothing but return a reference to the schema
     /// already added to the generator previously.
     pub fn generate<T: JsonSchema>(&mut self) -> Schema {
-        self.0.subschema_for::<T>()
+        let mut schema = self.0.subschema_for::<T>();
+        for v in self.0.visitors_mut() {
+            v.visit_schema(&mut schema);
+        }
+        schema
     }
 
     /// Generate an openapi schema for the type `T`
@@ -41,7 +49,11 @@ impl SchemaGenerator {
     /// outlined in `JsonSchema`'s docs.
     /// Namely, [`JsonSchema::json_schema`] **should not** return a `$ref` schema.
     pub fn generate_refless<T: JsonSchema>(&mut self) -> Schema {
-        T::json_schema(&mut self.0)
+        let mut schema = T::json_schema(&mut self.0);
+        for v in self.0.visitors_mut() {
+            v.visit_schema(&mut schema);
+        }
+        schema
     }
 
     /// Generate an openapi schema of `"type": "object"`
@@ -58,5 +70,31 @@ impl SchemaGenerator {
             }) => Some(object),
             _ => None,
         }
+    }
+
+    pub fn into_definitions(mut self) -> Map<String, Schema> {
+        let mut definitions = self.0.take_definitions();
+        for v in self.0.visitors_mut() {
+            for s in definitions.values_mut() {
+                v.visit_schema(s);
+            }
+        }
+        definitions
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ReplaceNullType;
+impl Visitor for ReplaceNullType {
+    fn visit_schema_object(&mut self, schema: &mut SchemaObject) {
+        if let Some(SingleOrVec::Single(boxed)) = &schema.instance_type {
+            if **boxed == InstanceType::Null {
+                schema.instance_type = None;
+                schema
+                    .extensions
+                    .insert("nullable".to_string(), Value::Bool(true));
+            }
+        }
+        visit_schema_object(self, schema);
     }
 }
