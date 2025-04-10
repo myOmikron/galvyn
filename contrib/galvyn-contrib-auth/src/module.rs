@@ -1,5 +1,6 @@
 use crate::handler;
-use crate::logic;
+#[cfg(feature = "oidc")]
+use crate::logic::oidc;
 use galvyn_core::{GalvynRouter, InitError, Module, PreInitError};
 #[cfg(feature = "oidc")]
 use openidconnect::{ClientId, ClientSecret, IssuerUrl};
@@ -15,8 +16,8 @@ use webauthn_rs::{Webauthn, WebauthnBuilder};
 pub struct AuthModule {
     pub handler: AuthHandler,
     pub(crate) db: Database,
-    #[cfg_attr(not(feature = "oidc"), allow(unused))]
-    pub(crate) oidc: logic::oidc::Client,
+    #[cfg(feature = "oidc")]
+    pub(crate) oidc: oidc::Client,
     pub(crate) webauthn: Webauthn,
     pub(crate) attestation_ca_list: AttestationCaList,
 }
@@ -76,10 +77,17 @@ impl AuthHandler {
     }
 }
 
+pub struct AuthPreInit {
+    #[cfg(feature = "oidc")]
+    oidc: oidc::Client,
+    webauthn: Webauthn,
+    attestation_ca_list: AttestationCaList,
+}
+
 impl Module for AuthModule {
     type Setup = AuthSetup;
 
-    type PreInit = (logic::oidc::Client, Webauthn, AttestationCaList);
+    type PreInit = AuthPreInit;
 
     fn pre_init(
         AuthSetup { private: () }: Self::Setup,
@@ -87,10 +95,8 @@ impl Module for AuthModule {
         async move {
             let auth_config: AuthConfig = envy::from_env()?;
 
-            #[cfg(not(feature = "oidc"))]
-            let oidc = ();
             #[cfg(feature = "oidc")]
-            let oidc = logic::oidc::Client::discover(logic::oidc::Config {
+            let oidc = oidc::Client::discover(oidc::Config {
                 url: auth_config.oidc_issuer_url,
                 client_id: auth_config.oidc_client_id,
                 client_secret: auth_config.oidc_client_secret,
@@ -105,21 +111,27 @@ impl Module for AuthModule {
                 &auth_config.webauthn_attestation_ca_list,
             )?))?;
 
-            Ok((oidc, webauthn, attestation_ca_list))
+            Ok(AuthPreInit {
+                #[cfg(feature = "oidc")]
+                oidc,
+                webauthn,
+                attestation_ca_list,
+            })
         }
     }
 
     type Dependencies = (Database,);
 
     fn init(
-        (oidc, webauthn, attestation_ca_list): Self::PreInit,
+        pre_init: Self::PreInit,
         (db,): &mut Self::Dependencies,
     ) -> impl Future<Output = Result<Self, InitError>> + Send {
         ready(Ok(Self {
             db: db.clone(),
-            oidc,
-            webauthn,
-            attestation_ca_list,
+            #[cfg(feature = "oidc")]
+            oidc: pre_init.oidc,
+            webauthn: pre_init.webauthn,
+            attestation_ca_list: pre_init.attestation_ca_list,
             handler: AuthHandler::default(),
         }))
     }
