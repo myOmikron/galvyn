@@ -6,7 +6,10 @@ use std::borrow::Cow;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(missing_docs)]
-pub struct FinishLoginOidcRequest(pub OidcRequestState);
+pub struct FinishLoginOidcRequest {
+    #[serde(flatten)]
+    pub state: OidcRequestState,
+}
 impl JsonSchema for FinishLoginOidcRequest {
     fn schema_name() -> String {
         "FinishLoginOidcRequest".to_owned()

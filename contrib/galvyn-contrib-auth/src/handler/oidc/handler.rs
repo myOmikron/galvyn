@@ -6,22 +6,24 @@ use galvyn_core::re_exports::axum::response::Redirect;
 use galvyn_core::session::Session;
 use galvyn_core::stuff::api_error::{ApiError, ApiResult};
 use galvyn_core::Module;
-use galvyn_macros::post;
+use galvyn_macros::get;
 use rorm::and;
 use rorm::fields::types::MaxStr;
 use rorm::prelude::ForeignModelByField;
+use tracing::instrument;
 use uuid::Uuid;
 
-#[post("/login/oidc/start", core_crate = "::galvyn_core")]
+#[get("/login/oidc/start", core_crate = "::galvyn_core")]
 pub async fn login_oidc(session: Session) -> ApiResult<Redirect> {
     let (url, session_state) = AuthModule::global().oidc.begin_login()?;
 
-    session.insert("login_oidc", session_state).await?;
+    session.insert("oidc_login_data", session_state).await?;
 
     Ok(Redirect::temporary(url.as_str()))
 }
 
-#[post("/login/oidc/finish", core_crate = "::galvyn_core")]
+#[get("/login/oidc/finish", core_crate = "::galvyn_core")]
+#[instrument]
 pub async fn finish_login_oidc(
     session: Session,
     Query(request): Query<FinishLoginOidcRequest>,
@@ -33,7 +35,7 @@ pub async fn finish_login_oidc(
 
     let claims = AuthModule::global()
         .oidc
-        .finish_login(session_state, request.0)
+        .finish_login(session_state, request.state)
         .await?;
 
     let issuer = MaxStr::new(claims.issuer().to_string())
