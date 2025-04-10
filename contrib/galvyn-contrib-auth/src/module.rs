@@ -3,7 +3,7 @@ use crate::handler;
 use crate::logic::oidc;
 use galvyn_core::{GalvynRouter, InitError, Module, PreInitError};
 #[cfg(feature = "oidc")]
-use openidconnect::{ClientId, ClientSecret, IssuerUrl};
+use openidconnect::{ClientId, ClientSecret, IssuerUrl, RedirectUrl};
 use rorm::Database;
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Future};
@@ -52,6 +52,8 @@ pub struct AuthConfig {
     pub oidc_client_id: ClientId,
     #[cfg(feature = "oidc")]
     pub oidc_client_secret: ClientSecret,
+    #[cfg(feature = "oidc")]
+    pub oidc_redirect_url: RedirectUrl,
 
     pub webauthn_id: String,
     pub webauthn_origin: Url,
@@ -100,7 +102,7 @@ impl Module for AuthModule {
                 url: auth_config.oidc_issuer_url,
                 client_id: auth_config.oidc_client_id,
                 client_secret: auth_config.oidc_client_secret,
-                redirect_url: (|| todo!())(),
+                redirect_url: auth_config.oidc_redirect_url, // TODO try to calculate this ourselves
             })
             .await?;
 
