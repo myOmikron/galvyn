@@ -1,0 +1,12 @@
+[package]
+name = "galvyn-contrib-oauth"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+galvyn-core = { version = "*", path = "../../galvyn-core" }
+galvyn-macros = { version = "*", path = "../../galvyn-macros" }
+
+# Serialization support
+serde = { version = "~1", features = ["derive"] }
+schemars = { version = "~0.8" }

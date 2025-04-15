@@ -8,6 +8,7 @@ pub mod re_exports {
     pub use mime;
     pub use rorm;
     pub use schemars;
+    pub use uuid;
 }
 
 pub mod handler;

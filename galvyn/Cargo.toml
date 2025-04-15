@@ -18,6 +18,7 @@ rorm = { workspace = true }
 
 # Contrib modules
 galvyn-contrib-auth = { version = "~0.1", path = "../contrib/galvyn-contrib-auth", optional = true }
+galvyn-contrib-oauth = { version = "~0.1", path = "../contrib/galvyn-contrib-oauth", optional = true }
 
 # Error handling
 thiserror = { version = "~2" }
@@ -49,6 +50,7 @@ default = [
 ]
 contrib = [
     "dep:galvyn-contrib-auth",
+    "dep:galvyn-contrib-oauth",
 ]
 openapi = [
     "dep:openapiv3",
