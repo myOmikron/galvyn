@@ -15,7 +15,7 @@ pub struct AuthRequest {
     pub response_type: String,
 
     /// The client identifier as described in [Section 2.2](https://www.rfc-editor.org/rfc/rfc6749#section-2.2).
-    pub client_id: Uuid,
+    pub client_id: String,
 
     /// As described in [Section 3.1.2](https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2).
     pub redirect_uri: Option<String>,
@@ -40,7 +40,7 @@ pub struct AuthRequest {
 }
 
 /// The method of the code challenge
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 pub enum CodeChallengeMethod {
     /// Sha256
     #[serde(rename = "S256")]
@@ -206,7 +206,13 @@ fn default_challenge_method() -> CodeChallengeMethod {
 
 /// A time duration in whole seconds
 #[derive(JsonSchema)]
-struct DurationSeconds(u64);
+struct DurationSeconds(
+    #[expect(
+        dead_code,
+        reason = "This struct should never be instantiated. It is only used with #[serde(with)]"
+    )]
+    u64,
+);
 impl DurationSeconds {
     fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
     where

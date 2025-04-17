@@ -7,6 +7,14 @@ edition = "2024"
 galvyn-core = { version = "*", path = "../../galvyn-core" }
 galvyn-macros = { version = "*", path = "../../galvyn-macros" }
 
+rorm = { workspace = true }
+
+tracing = { version = "~0.1" }
+
+# Url builder and parser
+url = { version = "~2" }
+serde_urlencoded = { version = "~0.7" }
+
 # Serialization support
 serde = { version = "~1", features = ["derive"] }
 schemars = { version = "~0.8" }

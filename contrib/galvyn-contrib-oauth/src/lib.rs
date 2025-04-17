@@ -1,5 +1,7 @@
 pub mod handler;
 mod models;
-mod module;
+pub(crate) mod module;
+pub mod setup;
 
 pub use module::OauthProviderModule;
+pub use setup::OauthProviderSetup;
