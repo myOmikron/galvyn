@@ -218,6 +218,7 @@ pub fn handler(
     let turbo_fish = type_generics.as_turbofish();
     let type_params = sig.generics.type_params().map(|param| &param.ident);
     quote! {
+        #[allow(missing_docs, clippy::missing_docs_in_private_items)]
         mod #module_ident {
             pub use self::#func_ident::*;
 
