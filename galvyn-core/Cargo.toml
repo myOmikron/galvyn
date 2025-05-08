@@ -37,7 +37,7 @@ envy = { version = "~0.4" }
 # ----- #
 
 # Runtime
-tokio = { version = "~1", default-features = false }
+tokio = { workspace = true, default-features = false }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }

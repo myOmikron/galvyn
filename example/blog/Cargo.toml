@@ -11,7 +11,7 @@ description = "A blog created with galvyn"
 galvyn = { path = "../../galvyn", version = "*", features = ["contrib", "openapi"] }
 
 # async runtime
-tokio = { version = ">=1.23.1", features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
 
 serde = { version = "1.0.214", features = ["derive"] }
 tracing = "0.1.40"

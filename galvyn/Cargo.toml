@@ -24,7 +24,7 @@ galvyn-contrib-oauth = { version = "~0.1", path = "../contrib/galvyn-contrib-oau
 thiserror = { version = "~2" }
 
 # Async runtime
-tokio = { version = ">=1.23.1", features = ["net"] }
+tokio = { workspace = true, features = ["net"] }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }
