@@ -3,6 +3,7 @@ use signal_hook_tokio::Signals;
 use std::future::{poll_fn, Future};
 use std::io;
 use std::pin::Pin;
+use tracing::{debug, warn};
 
 /// Constructs a future with resolves after receiving a [termination signal](signal_hook::consts::TERM_SIGNALS)
 ///
@@ -13,6 +14,10 @@ pub fn wait_for_signal() -> io::Result<impl Future<Output = ()>> {
     Ok(async move {
         let handle = signals.handle();
         let signal = poll_fn(|ctx| Pin::new(&mut signals).poll_next(ctx)).await;
+        match signal {
+            Some(sig_num) => debug!(signal.number = sig_num, "Shutting down"),
+            None => warn!("Signal stream terminated, this is unexpected!"),
+        }
         handle.close();
     })
 }
