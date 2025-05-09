@@ -7,7 +7,7 @@ members = [
     "./galvyn-core",
     "./contrib/galvyn-contrib-auth",
     "./contrib/galvyn-contrib-oauth",
-    "./example/blog",
+    "./example/blog", "contrib/galvyn-contrib-timers",
 ]
 
 [workspace.dependencies]

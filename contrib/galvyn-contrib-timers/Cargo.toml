@@ -1,0 +1,12 @@
+[package]
+name = "galvyn-contrib-timers"
+version = "0.1.0"
+edition = "2024"
+license = "MPL-2.0"
+
+[dependencies]
+galvyn-core = { version = "*", path = "../../galvyn-core" }
+galvyn-macros = { version = "*", path = "../../galvyn-macros" }
+
+rorm = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
