@@ -23,13 +23,7 @@ pub struct GalvynRouter {
 
     /// The underlying axum router
     router: Router,
-
     /* Parameters added to new handlers */
-    /// A base path all handlers are routed under
-    ///
-    /// This is effectively remembers the argument actix' `Scope` was created with.
-    /// Since `Router` doesn't take a path, this will always be empty for axum.
-    path: String,
     //
     // /// Changes have to be applied to already existing `handlers` manually
     // pages: Vec<&'static SwaggapiPage>,
@@ -89,9 +83,6 @@ impl GalvynRouter {
 
     /// Adds a [`GalvynRoute`] after adding this router's `path`, `tags` and `pages` to it
     fn push_handler(&mut self, mut handler: GalvynRoute) {
-        if !self.path.is_empty() {
-            handler.path = format!("{}{}", self.path, handler.path);
-        }
         // handler.tags.extend(self.tags.iter().copied());
         // handler.pages.extend(self.pages.iter().copied());
         self.handlers.push(handler);
