@@ -217,20 +217,51 @@ pub fn handler(
     let (impl_generics, type_generics, where_clause) = sig.generics.split_for_impl();
     let turbo_fish = type_generics.as_turbofish();
     let type_params = sig.generics.type_params().map(|param| &param.ident);
-    quote! {
-        #[allow(missing_docs, clippy::missing_docs_in_private_items)]
-        mod #module_ident {
-            pub use self::#func_ident::*;
 
-            #[allow(non_camel_case_types)]
-            pub enum #func_ident #impl_generics {
-                #func_ident,
+    let declaration = if sig.generics.params.is_empty() {
+        // "Normal" case of a non-generic handler
+        //
+        // We can emit a basic unit struct which is easier to understand
+        // (for tooling) than the general case below.
+        quote! {
+            pub struct #func_ident;
 
-                #[doc(hidden)]
-                #marker_ident(::std::convert::Infallible, ::std::marker::PhantomData<((), #(#type_params)*)>),
+            impl #impl_generics Default for #func_ident #type_generics #where_clause {
+                fn default() -> Self {
+                    Self
+                }
             }
         }
-        #vis use #module_ident::*;
+    } else {
+        // "Special" case if a generic handler
+        //
+        // We would like to emit a unit struct but rust does not support generic unit structs.
+        // (The builtin PhantomData being the exception.)
+        // This workaround is based on a [case study](github.com/dtolnay/case-studies) by dtolnay.
+        quote! {
+            mod #module_ident {
+                pub use self::#func_ident::*;
+
+                #[allow(non_camel_case_types)]
+                pub enum #func_ident #impl_generics {
+                    #func_ident,
+
+                    #[doc(hidden)]
+                    #marker_ident(::std::convert::Infallible, ::std::marker::PhantomData<((), #(#type_params)*)>),
+                }
+            }
+            #vis use #module_ident::*;
+
+            impl #impl_generics Default for #func_ident #type_generics #where_clause {
+                fn default() -> Self {
+                    Self::#func_ident
+                }
+            }
+        }
+    };
+    quote! {
+        #[allow(missing_docs, clippy::missing_docs_in_private_items)]
+        #declaration
 
         impl #impl_generics Clone for #func_ident #type_generics #where_clause {
             fn clone(&self) -> Self {
@@ -238,11 +269,6 @@ pub fn handler(
             }
         }
         impl #impl_generics Copy for #func_ident #type_generics #where_clause {}
-        impl #impl_generics Default for #func_ident #type_generics #where_clause {
-            fn default() -> Self {
-                Self::#func_ident
-            }
-        }
         impl #impl_generics #core_crate::handler::GalvynHandler for #func_ident #type_generics #where_clause {
             fn meta(&self) -> #core_crate::handler::HandlerMeta {
                 #core_crate::handler::HandlerMeta {
