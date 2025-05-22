@@ -1,7 +1,7 @@
 use crate::core::Module;
 use crate::error::GalvynError;
 use galvyn_core::registry::builder::RegistryBuilder;
-use galvyn_core::router::MutHandlerMeta;
+use galvyn_core::router::GalvynRoute;
 use galvyn_core::session;
 use galvyn_core::GalvynRouter;
 use std::mem;
@@ -94,10 +94,10 @@ impl RouterBuilder {
     }
 }
 
-static HANDLERS: RwLock<&'static [MutHandlerMeta]> = RwLock::new(&[]);
+static HANDLERS: RwLock<&'static [GalvynRoute]> = RwLock::new(&[]);
 
 /// Quick and dirty solution to expose the registered handlers after startup
 #[doc(hidden)]
-pub fn get_routes() -> &'static [MutHandlerMeta] {
+pub fn get_routes() -> &'static [GalvynRoute] {
     *HANDLERS.read().unwrap()
 }

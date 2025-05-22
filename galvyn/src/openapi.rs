@@ -30,7 +30,7 @@ fn generate_openapi() -> OpenAPI {
             unreachable!("We only ever insert ReferenceOr::Item. See above")
         };
 
-        let operation = match route.method {
+        let operation = match route.handler.method {
             Method::GET => &mut path.get,
             Method::POST => &mut path.post,
             Method::PUT => &mut path.put,
@@ -43,19 +43,25 @@ fn generate_openapi() -> OpenAPI {
         };
         let operation = operation.get_or_insert_default();
 
-        operation.summary = route.doc.get(0).map(|line| line.trim().to_string());
-        if let Some((head, rest)) = route.doc.split_first() {
+        operation.summary = route.handler.doc.get(0).map(|line| line.trim().to_string());
+        if let Some((head, rest)) = route.handler.doc.split_first() {
             let description = operation.description.insert(head.trim().to_string());
             for line in rest {
                 description.push('\n');
                 description.push_str(line.trim());
             }
         }
-        operation.operation_id = Some(route.ident.to_string());
-        operation.deprecated = route.deprecated;
-        operation.tags = route.tags.iter().copied().map(String::from).collect();
+        operation.operation_id = Some(route.handler.ident.to_string());
+        operation.deprecated = route.handler.deprecated;
+        operation.tags = route
+            .handler
+            .tags
+            .iter()
+            .copied()
+            .map(String::from)
+            .collect();
 
-        if let Some(response_body) = route.response_body.as_ref() {
+        if let Some(response_body) = route.handler.response_body.as_ref() {
             for (status_code, body) in (response_body.body)(&mut schemas) {
                 // Insert status code
                 let ReferenceOr::Item(response) = operation
@@ -81,12 +87,14 @@ fn generate_openapi() -> OpenAPI {
                     Ok(schema) => schema,
                     Err(error) => {
                         warn!(
-                            route.ident,
+                            route.handler.ident,
+                            route.path,
                             reason = "Schema is not proper openapiv3",
                             "Malformed response body schema"
                         );
                         debug!(
-                            route.ident,
+                            route.handler.ident,
+                            route.path,
                             reason = "Schema is not proper openapiv3",
                             error.display = %error,
                             error.debug = ?error,
@@ -123,7 +131,7 @@ fn generate_openapi() -> OpenAPI {
                 };
             }
         }
-        if let Some(request_body) = route.request_body.as_ref() {
+        if let Some(request_body) = route.handler.request_body.as_ref() {
             let (mime, schema) = (request_body.body)(&mut schemas);
             operation.request_body = Some(ReferenceOr::Item(RequestBody {
                 content: FromIterator::from_iter([(
@@ -133,12 +141,14 @@ fn generate_openapi() -> OpenAPI {
                             result
                                 .inspect_err(|error| {
                                     warn!(
-                                        route.ident,
+                                        route.handler.ident,
+                                        route.path,
                                         reason = "Schema is not proper openapiv3",
                                         "Malformed request body schema"
                                     );
                                     debug!(
-                                        route.ident,
+                                        route.handler.ident,
+                                        route.path,
                                         reason = "Schema is not proper openapiv3",
                                         error.display = %error,
                                         error.debug = ?error,
@@ -153,7 +163,7 @@ fn generate_openapi() -> OpenAPI {
                 ..Default::default()
             }));
         }
-        for part in &route.request_parts {
+        for part in &route.handler.request_parts {
             for (name, schema) in (part.path_parameters)(&mut schemas) {
                 operation
                     .parameters
@@ -176,7 +186,7 @@ fn generate_openapi() -> OpenAPI {
                     }));
             }
         }
-        for part in &route.response_parts {
+        for part in &route.handler.response_parts {
             // TODO
         }
     }
