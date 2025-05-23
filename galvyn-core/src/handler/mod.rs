@@ -48,9 +48,6 @@ pub struct HandlerMeta {
     /// The handler's identifier
     pub ident: &'static str,
 
-    /// Tags set through `#[operation(..., tags(...))]`
-    pub tags: &'static [&'static str],
-
     pub request_parts: Vec<RequestPartMetadata>,
 
     pub request_body: Option<RequestBodyMetadata>,

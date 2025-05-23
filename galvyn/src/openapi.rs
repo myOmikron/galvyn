@@ -100,17 +100,7 @@ fn generate_openapi() -> OpenAPI {
         }
         operation.operation_id = Some(route.handler.ident.to_string());
         operation.deprecated = route.handler.deprecated;
-        // TODO: delete this old tag system?
-        operation.tags = route
-            .handler
-            .tags
-            .iter()
-            .copied()
-            .map(String::from)
-            .collect();
-        operation
-            .tags
-            .extend(openapi_ext.tags.iter().copied().map(String::from));
+        operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
 
         if let Some(response_body) = route.handler.response_body.as_ref() {
             for (status_code, body) in (response_body.body)(&mut schemas) {
