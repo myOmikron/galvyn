@@ -5,14 +5,11 @@ use std::str::FromStr;
 use galvyn::contrib::auth::AuthModule;
 use galvyn::rorm::Database;
 use galvyn::{get, Galvyn};
-use std::any::Any;
-use std::panic;
-use std::panic::Location;
 
 use galvyn::core::re_exports::axum::response::{IntoResponse, Response};
 use galvyn::core::re_exports::axum::Json;
 use galvyn::core::{GalvynRouter, Module};
-use tracing::error;
+use galvyn::openapi::OpenapiRouterExt;
 
 #[get("/index")]
 async fn test<const N: usize, T: 'static>() -> String {
@@ -31,9 +28,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register_module::<AuthModule>(Default::default())
         .init_modules()
         .await?
-        .add_routes(GalvynRouter::new().nest("/auth", AuthModule::global().handler.as_router()))
+        .add_routes(
+            GalvynRouter::with_openapi_tag("Auth Module")
+                .nest("/auth", AuthModule::global().handler.as_router()),
+        )
         .add_routes(
             GalvynRouter::new()
+                .openapi_tag("Main")
                 .handler(test::<1337, ()>)
                 .handler(openapi),
         )
