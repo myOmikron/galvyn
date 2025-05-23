@@ -224,6 +224,7 @@ pub fn handler(
         // We can emit a basic unit struct which is easier to understand
         // (for tooling) than the general case below.
         quote! {
+            #[allow(non_camel_case_types)]
             pub struct #func_ident;
 
             impl #impl_generics Default for #func_ident #type_generics #where_clause {
