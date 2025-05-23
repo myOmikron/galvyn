@@ -76,31 +76,7 @@ impl GalvynRouter {
     }
 
     pub fn finish(self) -> (Router, Vec<GalvynRoute>) {
-        // for mut handler in self.handlers {
-        //     handler.path = framework_path_to_openapi(handler.path);
-        //
-        //     PAGE_OF_EVERYTHING.add_handler(&handler);
-        //     for page in handler.pages.iter() {
-        //         page.add_handler(&handler);
-        //     }
-        // }
-        return (self.router, self.handlers);
-
-        /// Converts the framework's syntax for path parameters into openapi's
-        fn framework_path_to_openapi(framework_path: String) -> String {
-            use std::borrow::Cow;
-            use std::sync::OnceLock;
-
-            use regex::Regex;
-
-            static RE: OnceLock<Regex> = OnceLock::new();
-
-            let regex = RE.get_or_init(|| Regex::new(":([^/]*)").unwrap());
-            match regex.replace_all(&framework_path, "{$1}") {
-                Cow::Borrowed(_) => framework_path,
-                Cow::Owned(new_path) => new_path,
-            }
-        }
+        (self.router, self.handlers)
     }
 
     /// Calls [`Router::nest`] while preserving api information
