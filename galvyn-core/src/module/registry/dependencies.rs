@@ -50,9 +50,7 @@ impl_tuples!(impl_module_dependencies);
 impl ModuleDependencies for () {
     fn for_each(_func: impl FnMut(TypeId, &'static str)) {}
 
-    fn take(_modules: &mut OwnedModulesSet) -> Self {
-        ()
-    }
+    fn take(_modules: &mut OwnedModulesSet) -> Self {}
 
     fn put_back(self, _modules: &mut OwnedModulesSet) {}
 }

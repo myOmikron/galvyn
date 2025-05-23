@@ -106,7 +106,7 @@ impl IntoResponse for OauthError {
             ))
             .unwrap_or_else(|_| unreachable!("The AuthError struct should always be serializable"));
 
-            Redirect::temporary(&redirect_uri.to_string()).into_response()
+            Redirect::temporary(redirect_uri.as_str()).into_response()
         } else {
             ApiJson(AuthError {
                 error: self.error,

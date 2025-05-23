@@ -111,35 +111,30 @@ impl Module for AuthModule {
 
     type PreInit = (OidcClient, Webauthn, AttestationCaList);
 
-    fn pre_init(
+    async fn pre_init(
         AuthSetup { private: () }: Self::Setup,
-    ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
-        async move {
-            let auth_config: AuthConfig = envy::from_env()?;
+    ) -> Result<Self::PreInit, PreInitError> {
+        let auth_config: AuthConfig = envy::from_env()?;
 
-            #[cfg(not(feature = "oidc"))]
-            let oidc = ();
-            #[cfg(feature = "oidc")]
-            let oidc = OidcClient::from_provider_metadata(
-                CoreProviderMetadata::discover_async(
-                    auth_config.oidc_issuer_url,
-                    async_http_client,
-                )
+        #[cfg(not(feature = "oidc"))]
+        let oidc = ();
+        #[cfg(feature = "oidc")]
+        let oidc = OidcClient::from_provider_metadata(
+            CoreProviderMetadata::discover_async(auth_config.oidc_issuer_url, async_http_client)
                 .await?,
-                auth_config.oidc_client_id,
-                Some(auth_config.oidc_client_secret),
-            );
-            // TODO: can't set redirect uri before application author mounted our handler to its router :(
+            auth_config.oidc_client_id,
+            Some(auth_config.oidc_client_secret),
+        );
+        // TODO: can't set redirect uri before application author mounted our handler to its router :(
 
-            let webauthn =
-                WebauthnBuilder::new(&auth_config.webauthn_id, &auth_config.webauthn_origin)?
-                    .build()?;
-            let attestation_ca_list = serde_json::from_reader(io::BufReader::new(fs::File::open(
-                &auth_config.webauthn_attestation_ca_list,
-            )?))?;
+        let webauthn =
+            WebauthnBuilder::new(&auth_config.webauthn_id, &auth_config.webauthn_origin)?
+                .build()?;
+        let attestation_ca_list = serde_json::from_reader(io::BufReader::new(fs::File::open(
+            &auth_config.webauthn_attestation_ca_list,
+        )?))?;
 
-            Ok((oidc, webauthn, attestation_ca_list))
-        }
+        Ok((oidc, webauthn, attestation_ca_list))
     }
 
     type Dependencies = (Database,);

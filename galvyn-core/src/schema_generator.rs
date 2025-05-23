@@ -26,6 +26,11 @@ impl AsMut<InnerGenerator> for SchemaGenerator {
         &mut self.0
     }
 }
+impl Default for SchemaGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {

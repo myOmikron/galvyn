@@ -1,10 +1,9 @@
+use crate::module::Module;
+use crate::module::registry::DynModule;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::hash::Hasher;
-
-use crate::module::Module;
-use crate::module::registry::DynModule;
 
 pub struct ModuleSet<M> {
     set: HashMap<TypeId, M, BuildXorHasher>,
@@ -12,7 +11,12 @@ pub struct ModuleSet<M> {
 pub type OwnedModulesSet = ModuleSet<Box<dyn DynModule>>;
 pub type LeakedModuleSet = ModuleSet<&'static dyn DynModule>;
 
-impl<P> ModuleSet<P> {
+impl<M> Default for ModuleSet<M> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl<M> ModuleSet<M> {
     pub fn new() -> Self {
         Self {
             set: HashMap::with_hasher(BuildXorHasher),

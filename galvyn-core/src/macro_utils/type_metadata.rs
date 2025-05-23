@@ -37,6 +37,10 @@ pub struct If<M, T> {
     r#else: Else<M>,
 }
 impl<M, T> If<M, T> {
+    #[expect(
+        clippy::new_without_default,
+        reason = "This type is only used by our macro and it needs to be const"
+    )]
     pub const fn new() -> Self {
         Self {
             metadata: PhantomData,

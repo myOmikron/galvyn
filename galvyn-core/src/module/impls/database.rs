@@ -1,5 +1,3 @@
-use std::future::Future;
-
 use rorm::Database;
 use rorm::DatabaseConfiguration;
 use rorm::DatabaseDriver;
@@ -33,39 +31,35 @@ impl Module for Database {
 
     type PreInit = DatabaseConfiguration;
 
-    fn pre_init(
-        setup: Self::Setup,
-    ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send {
-        async move {
-            match setup {
-                DatabaseSetup::Default => {
-                    let DatabaseConfig {
-                        postgres_db,
-                        postgres_host,
-                        postgres_port,
-                        postgres_user,
-                        postgres_password,
-                    } = envy::from_env()?;
+    async fn pre_init(setup: Self::Setup) -> Result<Self::PreInit, PreInitError> {
+        match setup {
+            DatabaseSetup::Default => {
+                let DatabaseConfig {
+                    postgres_db,
+                    postgres_host,
+                    postgres_port,
+                    postgres_user,
+                    postgres_password,
+                } = envy::from_env()?;
 
-                    Ok(DatabaseConfiguration::new(DatabaseDriver::Postgres {
-                        name: postgres_db,
-                        host: postgres_host,
-                        port: postgres_port,
-                        user: postgres_user,
-                        password: postgres_password,
-                    }))
-                }
-                DatabaseSetup::Custom(config) => Ok(config),
+                Ok(DatabaseConfiguration::new(DatabaseDriver::Postgres {
+                    name: postgres_db,
+                    host: postgres_host,
+                    port: postgres_port,
+                    user: postgres_user,
+                    password: postgres_password,
+                }))
             }
+            DatabaseSetup::Custom(config) => Ok(config),
         }
     }
 
     type Dependencies = ();
 
-    fn init(
+    async fn init(
         config: Self::PreInit,
         _dependencies: &mut Self::Dependencies,
-    ) -> impl Future<Output = Result<Self, InitError>> + Send {
-        async move { Ok(Database::connect(config).await?) }
+    ) -> Result<Self, InitError> {
+        Ok(Database::connect(config).await?)
     }
 }

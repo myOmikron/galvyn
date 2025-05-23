@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 
 use axum::http::Method;
 use galvyn_core::re_exports::schemars;
-use galvyn_core::router::RouteExtension;
+use galvyn_core::router::{GalvynRoute, RouteExtension};
 use galvyn_core::schema_generator::SchemaGenerator;
 use galvyn_core::GalvynRouter;
 use openapiv3::Components;
@@ -102,7 +102,11 @@ fn generate_openapi() -> OpenAPI {
         };
         let operation = operation.get_or_insert_default();
 
-        operation.summary = route.handler.doc.get(0).map(|line| line.trim().to_string());
+        operation.summary = route
+            .handler
+            .doc
+            .first()
+            .map(|line| line.trim().to_string());
         if let Some((head, rest)) = route.handler.doc.split_first() {
             let description = operation.description.insert(head.trim().to_string());
             for line in rest {
@@ -223,7 +227,7 @@ fn generate_openapi() -> OpenAPI {
                     .push(ReferenceOr::Item(Parameter::Path {
                         parameter_data: ParameterData {
                             required: true,
-                            ..convert_parameter(name, schema)
+                            ..convert_parameter(name, schema, route)
                         },
                         style: Default::default(),
                     }));
@@ -232,7 +236,7 @@ fn generate_openapi() -> OpenAPI {
                 operation
                     .parameters
                     .push(ReferenceOr::Item(Parameter::Query {
-                        parameter_data: convert_parameter(name, schema),
+                        parameter_data: convert_parameter(name, schema, route),
                         allow_reserved: Default::default(),
                         style: Default::default(),
                         allow_empty_value: Default::default(),
@@ -289,7 +293,11 @@ fn generate_openapi() -> OpenAPI {
     }
 }
 
-fn convert_parameter(name: String, schema: Option<schemars::schema::Schema>) -> ParameterData {
+fn convert_parameter(
+    name: String,
+    schema: Option<schemars::schema::Schema>,
+    route: &GalvynRoute,
+) -> ParameterData {
     ParameterData {
         name,
         description: None,
@@ -299,7 +307,23 @@ fn convert_parameter(name: String, schema: Option<schemars::schema::Schema>) -> 
             schema
                 .and_then(|schema| match convert_schema(&schema) {
                     Ok(schema) => Some(schema),
-                    Err(_) => None,
+                    Err(error) => {
+                        warn!(
+                            route.handler.ident,
+                            route.path,
+                            reason = "Schema is not proper openapiv3",
+                            "Malformed request parameter schema"
+                        );
+                        debug!(
+                            route.handler.ident,
+                            route.path,
+                            reason = "Schema is not proper openapiv3",
+                            error.display = %error,
+                            error.debug = ?error,
+                            "Malformed request parameter schema"
+                        );
+                        None
+                    }
                 })
                 .unwrap_or_else(|| {
                     ReferenceOr::Item(Schema {

@@ -226,6 +226,6 @@ impl DurationSeconds {
     where
         D: serde::Deserializer<'de>,
     {
-        u64::deserialize(deserializer).map(|secs| Duration::from_secs(secs))
+        u64::deserialize(deserializer).map(Duration::from_secs)
     }
 }

@@ -32,7 +32,7 @@ impl RegistryBuilder {
     }
 
     fn contains_module(&self, type_id: TypeId) -> bool {
-        self.modules.iter().find(|(id, _)| *id == type_id).is_some()
+        self.modules.iter().any(|(id, _)| *id == type_id)
     }
 
     /// Adds a new module to the `RegistryBuilder`
