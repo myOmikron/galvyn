@@ -1,9 +1,11 @@
 #![allow(private_interfaces)]
 
+use std::any::TypeId;
+use std::any::type_name;
+
 use crate::module::Module;
 use crate::module::registry::module_set::OwnedModulesSet;
 use crate::util_macros::impl_tuples;
-use std::any::{TypeId, type_name};
 
 /// A tuple of [`Module`]s which need to be initialized before another one which depends on them.
 pub trait ModuleDependencies: Sized + Send + Sync + 'static {

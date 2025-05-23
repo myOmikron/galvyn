@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use proc_macro2::Ident;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
@@ -5,13 +7,13 @@ use proc_macro2::TokenTree;
 use quote::format_ident;
 use quote::quote;
 use quote::quote_spanned;
-use std::str::FromStr;
 use syn::spanned::Spanned;
+use syn::FnArg;
 use syn::ItemFn;
 use syn::Meta;
 use syn::MetaNameValue;
 use syn::ReturnType;
-use syn::{FnArg, Type};
+use syn::Type;
 
 mod parse;
 

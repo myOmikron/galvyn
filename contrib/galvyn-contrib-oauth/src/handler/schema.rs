@@ -1,10 +1,11 @@
 //! Different request and response types as defined in [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749)
 
+use std::time::Duration;
+
 use galvyn_core::re_exports::uuid::Uuid;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use std::time::Duration;
 
 /// The client constructs the request URI by adding the following
 /// parameters to the query component of the authorization endpoint URI

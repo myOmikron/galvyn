@@ -1,8 +1,10 @@
 use rorm::fields::types::Json;
 use rorm::prelude::ForeignModel;
 use rorm::Model;
-use serde::{Deserialize, Serialize};
-use webauthn_rs::prelude::{AttestedPasskey, Passkey};
+use serde::Deserialize;
+use serde::Serialize;
+use webauthn_rs::prelude::AttestedPasskey;
+use webauthn_rs::prelude::Passkey;
 
 #[derive(Model)]
 pub struct Account {

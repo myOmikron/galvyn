@@ -1,8 +1,14 @@
+use schemars::JsonSchema;
+use schemars::Map;
 use schemars::r#gen::SchemaGenerator as InnerGenerator;
 use schemars::r#gen::SchemaSettings;
-use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject, SingleOrVec};
-use schemars::visit::{Visitor, visit_schema_object};
-use schemars::{JsonSchema, Map};
+use schemars::schema::InstanceType;
+use schemars::schema::ObjectValidation;
+use schemars::schema::Schema;
+use schemars::schema::SchemaObject;
+use schemars::schema::SingleOrVec;
+use schemars::visit::Visitor;
+use schemars::visit::visit_schema_object;
 use serde_json::Value;
 
 /// State for generating schemas from types implementing [`JsonSchema`]

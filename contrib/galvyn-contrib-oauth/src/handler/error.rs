@@ -1,7 +1,11 @@
-use crate::handler::schema::{AuthError, AuthErrorType, AuthRequest};
-use galvyn_core::handler::response_body::{ResponseBody, ShouldBeResponseBody};
+use std::panic::Location;
+
+use galvyn_core::handler::response_body::ResponseBody;
+use galvyn_core::handler::response_body::ShouldBeResponseBody;
 use galvyn_core::re_exports::axum::http::StatusCode;
-use galvyn_core::re_exports::axum::response::{IntoResponse, Redirect, Response};
+use galvyn_core::re_exports::axum::response::IntoResponse;
+use galvyn_core::re_exports::axum::response::Redirect;
+use galvyn_core::re_exports::axum::response::Response;
 use galvyn_core::re_exports::mime::Mime;
 use galvyn_core::schema_generator::SchemaGenerator;
 use galvyn_core::stuff::api_error::ApiError;
@@ -9,9 +13,12 @@ use galvyn_core::stuff::api_json::ApiJson;
 use galvyn_core::stuff::schema::ApiStatusCode;
 use schemars::schema::Schema;
 use serde::Serialize;
-use std::panic::Location;
 use tracing::info;
 use url::Url;
+
+use crate::handler::schema::AuthError;
+use crate::handler::schema::AuthErrorType;
+use crate::handler::schema::AuthRequest;
 
 pub struct OauthErrorBuilder {
     redirect_uri: Option<Url>,

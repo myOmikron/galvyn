@@ -7,10 +7,10 @@ use axum::routing::Router;
 use tower::Layer;
 use tower::Service;
 
+pub use self::extension::RouteExtension;
+pub use self::extension::RouteExtensions;
 use crate::handler::GalvynHandler;
 use crate::handler::HandlerMeta;
-
-pub use self::extension::{RouteExtension, RouteExtensions};
 
 mod extension;
 

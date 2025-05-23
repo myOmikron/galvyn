@@ -1,18 +1,30 @@
-use crate::get_routes;
-use axum::http::Method;
-use galvyn_core::re_exports::schemars;
-use galvyn_core::schema_generator::SchemaGenerator;
-use openapiv3::{
-    Components, Info, MediaType, Parameter, ParameterData, ParameterSchemaOrContent, PathItem,
-    Paths, ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode,
-};
 use std::mem;
 use std::sync::OnceLock;
-use tracing::{debug, warn};
 
+use axum::http::Method;
+use galvyn_core::re_exports::schemars;
 use galvyn_core::router::RouteExtension;
+use galvyn_core::schema_generator::SchemaGenerator;
 use galvyn_core::GalvynRouter;
+use openapiv3::Components;
+use openapiv3::Info;
+use openapiv3::MediaType;
 pub use openapiv3::OpenAPI;
+use openapiv3::Parameter;
+use openapiv3::ParameterData;
+use openapiv3::ParameterSchemaOrContent;
+use openapiv3::PathItem;
+use openapiv3::Paths;
+use openapiv3::ReferenceOr;
+use openapiv3::RequestBody;
+use openapiv3::Response;
+use openapiv3::Schema;
+use openapiv3::SchemaKind;
+use openapiv3::StatusCode;
+use tracing::debug;
+use tracing::warn;
+
+use crate::get_routes;
 
 /// Extension trait for [`GalvynRouter`]
 ///

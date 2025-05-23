@@ -1,11 +1,15 @@
+use axum::http::Method;
+use axum::http::Response;
+use axum::http::StatusCode;
+use axum::http::response::Parts;
+use axum::routing::MethodRouter;
+
 use self::request_body::RequestBodyMetadata;
 use self::request_part::RequestPartMetadata;
 use self::response_body::ResponseBodyMetadata;
 use self::response_part::ResponsePartMetadata;
-use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
-use axum::http::response::Parts;
-use axum::http::{Method, Response, StatusCode};
-use axum::routing::MethodRouter;
+use crate::macro_utils::type_metadata::HasMetadata;
+use crate::macro_utils::type_metadata::ShouldHaveMetadata;
 
 mod impls;
 pub mod request_body;

@@ -1,9 +1,13 @@
-use crate::handler::response_part::{ResponsePart, ShouldBeResponsePart};
-use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
-use crate::schema_generator::SchemaGenerator;
-use axum::http::{HeaderName, StatusCode};
+use axum::http::HeaderName;
+use axum::http::StatusCode;
 use mime::Mime;
 use schemars::schema::Schema;
+
+use crate::handler::response_part::ResponsePart;
+use crate::handler::response_part::ShouldBeResponsePart;
+use crate::macro_utils::type_metadata::HasMetadata;
+use crate::macro_utils::type_metadata::ShouldHaveMetadata;
+use crate::schema_generator::SchemaGenerator;
 
 /// Describes the behaviour of a type implementing [`IntoResponse`](axum::response::IntoResponse)
 pub trait ResponseBody: ShouldBeResponseBody {

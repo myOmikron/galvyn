@@ -1,5 +1,6 @@
-use galvyn_core::re_exports::uuid::Uuid;
 use std::fmt;
+
+use galvyn_core::re_exports::uuid::Uuid;
 
 /// Setup for the [`OauthProviderModule`](crate::OauthProviderModule)
 #[derive(Debug)]

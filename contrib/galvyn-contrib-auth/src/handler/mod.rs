@@ -1,20 +1,29 @@
-use crate::handler::schema::{
-    GetLoginFlowsRequest, GetLoginFlowsResponse, LocalLoginFlow, LoginLocalPasswordRequest,
-    LoginLocalWebauthnRequest, OidcLoginFlow, PublicKeyCredential, RequestChallengeResponse,
-};
-use crate::module::AuthModule;
-use crate::{Account, MaybeAttestedPasskey};
 use galvyn_core::re_exports::axum::extract::Query;
-
 use galvyn_core::re_exports::axum::Json;
 use galvyn_core::session::Session;
-use galvyn_core::stuff::api_error::{ApiError, ApiResult};
+use galvyn_core::stuff::api_error::ApiError;
+use galvyn_core::stuff::api_error::ApiResult;
 use galvyn_core::Module;
-use galvyn_macros::{get, post};
-
-use crate::models::{LocalAccount, OidcAccount, WebAuthnKey};
-use serde::{Deserialize, Serialize};
+use galvyn_macros::get;
+use galvyn_macros::post;
+use serde::Deserialize;
+use serde::Serialize;
 use webauthn_rs::prelude::AttestedPasskeyAuthentication;
+
+use crate::handler::schema::GetLoginFlowsRequest;
+use crate::handler::schema::GetLoginFlowsResponse;
+use crate::handler::schema::LocalLoginFlow;
+use crate::handler::schema::LoginLocalPasswordRequest;
+use crate::handler::schema::LoginLocalWebauthnRequest;
+use crate::handler::schema::OidcLoginFlow;
+use crate::handler::schema::PublicKeyCredential;
+use crate::handler::schema::RequestChallengeResponse;
+use crate::models::LocalAccount;
+use crate::models::OidcAccount;
+use crate::models::WebAuthnKey;
+use crate::module::AuthModule;
+use crate::Account;
+use crate::MaybeAttestedPasskey;
 
 #[cfg(feature = "oidc")]
 mod oidc;

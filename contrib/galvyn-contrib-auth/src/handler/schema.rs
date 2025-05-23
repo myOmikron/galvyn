@@ -1,8 +1,10 @@
-use openidconnect::{AuthorizationCode, CsrfToken};
+use std::borrow::Cow;
+
+use openidconnect::AuthorizationCode;
+use openidconnect::CsrfToken;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
-use std::borrow::Cow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct GetLoginFlowsRequest {

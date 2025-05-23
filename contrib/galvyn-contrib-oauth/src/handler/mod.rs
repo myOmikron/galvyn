@@ -1,17 +1,24 @@
-use crate::OauthProviderModule;
-use crate::handler::error::{OauthErrorBuilder, OauthResult};
-use crate::handler::schema::{AuthErrorType, AuthRequest, CodeChallengeMethod};
-use crate::models::GalvynOauthClient;
-use crate::module::OauthRequest;
 use galvyn_core::Module;
-use galvyn_core::re_exports::axum::extract::{Path, Query};
+use galvyn_core::re_exports::axum::extract::Path;
+use galvyn_core::re_exports::axum::extract::Query;
 use galvyn_core::re_exports::axum::response::Redirect;
 use galvyn_core::re_exports::uuid::Uuid;
-use galvyn_core::stuff::api_error::{ApiError, ApiResult};
+use galvyn_core::stuff::api_error::ApiError;
+use galvyn_core::stuff::api_error::ApiResult;
 use galvyn_core::stuff::schema::SingleUuid;
-use galvyn_macros::{get, post};
+use galvyn_macros::get;
+use galvyn_macros::post;
 use tracing::info;
 use url::Url;
+
+use crate::OauthProviderModule;
+use crate::handler::error::OauthErrorBuilder;
+use crate::handler::error::OauthResult;
+use crate::handler::schema::AuthErrorType;
+use crate::handler::schema::AuthRequest;
+use crate::handler::schema::CodeChallengeMethod;
+use crate::models::GalvynOauthClient;
+use crate::module::OauthRequest;
 
 mod error;
 mod schema;

@@ -1,7 +1,14 @@
-use crate::{InitError, Module, PreInitError};
-use rorm::{Database, DatabaseConfiguration, DatabaseDriver};
-use serde::{Deserialize, Serialize};
 use std::future::Future;
+
+use rorm::Database;
+use rorm::DatabaseConfiguration;
+use rorm::DatabaseDriver;
+use serde::Deserialize;
+use serde::Serialize;
+
+use crate::InitError;
+use crate::Module;
+use crate::PreInitError;
 
 /// Config struct the [`DatabaseSetup::Default`] will deserialize from environment variables
 #[derive(Serialize, Deserialize, Debug)]

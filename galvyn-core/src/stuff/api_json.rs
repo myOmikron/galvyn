@@ -1,16 +1,16 @@
 //! Alternative for [`axum::Json`] which produces our [`ApiError`] in case of failure
 
+use axum::Json;
 use axum::body::Bytes;
 use axum::extract::FromRequest;
 use axum::extract::Request;
-use axum::http::header;
 use axum::http::HeaderValue;
 use axum::http::StatusCode;
+use axum::http::header;
 use axum::response::IntoResponse;
-use axum::Json;
 use schemars::schema::Schema;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::handler::request_body::RequestBody;
 use crate::handler::request_body::ShouldBeRequestBody;

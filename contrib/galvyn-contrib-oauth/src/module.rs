@@ -1,9 +1,14 @@
-use crate::OauthProviderSetup;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::sync::PoisonError;
+
+use galvyn_core::InitError;
+use galvyn_core::Module;
+use galvyn_core::PreInitError;
 use galvyn_core::re_exports::rorm::Database;
 use galvyn_core::re_exports::uuid::Uuid;
-use galvyn_core::{InitError, Module, PreInitError};
-use std::collections::HashMap;
-use std::sync::{Mutex, PoisonError};
+
+use crate::OauthProviderSetup;
 
 pub struct OauthProviderModule {
     pub(crate) db: Database,

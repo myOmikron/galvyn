@@ -1,25 +1,35 @@
-use super::request_body::{RequestBody, ShouldBeRequestBody};
-use super::request_part::{RequestPart, ShouldBeRequestPart};
-use crate::handler::response_body::{ResponseBody, ShouldBeResponseBody};
-use crate::schema_generator::SchemaGenerator;
+use std::any::type_name;
+use std::borrow::Cow;
+
 use axum::Form;
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::RawForm;
-use axum::http::{HeaderName, StatusCode, header};
-use axum::response::{Html, Redirect};
+use axum::http::HeaderName;
+use axum::http::StatusCode;
+use axum::http::header;
+use axum::response::Html;
+use axum::response::Redirect;
+use bytes::Buf;
+use bytes::BytesMut;
 use bytes::buf::Chain;
-use bytes::{Buf, BytesMut};
 use mime::Mime;
 use schemars::JsonSchema;
 use schemars::schema::Schema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use std::any::type_name;
-use std::borrow::Cow;
-use tracing::{debug, warn};
+use tracing::debug;
+use tracing::warn;
+
+use super::request_body::RequestBody;
+use super::request_body::ShouldBeRequestBody;
+use super::request_part::RequestPart;
+use super::request_part::ShouldBeRequestPart;
+use crate::handler::response_body::ResponseBody;
+use crate::handler::response_body::ShouldBeResponseBody;
+use crate::schema_generator::SchemaGenerator;
 
 impl ShouldBeRequestBody for String {}
 impl RequestBody for String {

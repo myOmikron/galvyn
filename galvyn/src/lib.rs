@@ -7,13 +7,10 @@ pub mod contrib {
 /// Re-export of [`rorm`](galvyn_core::re_exports::rorm)
 pub mod rorm {
     pub use galvyn_core::re_exports::rorm::*;
-
     /// Re-export from [`rorm`](galvyn_core::re_exports::rorm::DbEnum)
     pub use galvyn_macros::DbEnum;
-
     /// Re-export from [`rorm`](galvyn_core::re_exports::rorm::Model)
     pub use galvyn_macros::Model;
-
     /// Re-export from [`rorm`](galvyn_core::re_exports::rorm::Patch)
     pub use galvyn_macros::Patch;
 }

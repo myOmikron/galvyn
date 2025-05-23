@@ -1,11 +1,13 @@
-pub use self::dependencies::ModuleDependencies;
-use crate::module;
-use crate::module::registry::builder::RegistryBuilder;
-use crate::module::registry::module_set::LeakedModuleSet;
-use crate::module::Module;
 use std::any::Any;
 use std::sync::OnceLock;
+
 use tokio::task::JoinHandle;
+
+pub use self::dependencies::ModuleDependencies;
+use crate::module;
+use crate::module::Module;
+use crate::module::registry::builder::RegistryBuilder;
+use crate::module::registry::module_set::LeakedModuleSet;
 
 pub mod builder;
 mod dependencies;

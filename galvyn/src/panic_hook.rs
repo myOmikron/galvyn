@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::panic;
 use std::panic::Location;
+
 use tracing::error;
 
 /// Sets the global panic hook to output tracing events instead of writing to stdout

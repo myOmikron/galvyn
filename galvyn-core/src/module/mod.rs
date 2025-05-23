@@ -2,13 +2,16 @@
 //!
 //! A module is a singleton which exists for the entire duration of the application.
 
-pub use crate::module::impls::database::DatabaseSetup;
-use crate::module::registry::{ModuleDependencies, Registry};
 use std::any::type_name;
 use std::error::Error;
 use std::fmt;
 use std::future::Future;
+
 use thiserror::Error;
+
+pub use crate::module::impls::database::DatabaseSetup;
+use crate::module::registry::ModuleDependencies;
+use crate::module::registry::Registry;
 
 mod impls;
 pub mod registry;

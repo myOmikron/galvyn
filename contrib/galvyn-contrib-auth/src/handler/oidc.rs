@@ -1,5 +1,3 @@
-use crate::handler::schema::FinishLoginOidcRequest;
-use crate::{AuthModels, AuthModule};
 use galvyn_core::re_exports::axum::extract::Query;
 use galvyn_core::re_exports::axum::response::Redirect;
 use galvyn_core::session::Session;
@@ -8,16 +6,24 @@ use galvyn_core::Module;
 use galvyn_macros::post;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::reqwest::async_http_client;
+use openidconnect::AccessTokenHash;
+use openidconnect::CsrfToken;
+use openidconnect::Nonce;
 use openidconnect::OAuth2TokenResponse;
+use openidconnect::PkceCodeChallenge;
+use openidconnect::PkceCodeVerifier;
+use openidconnect::Scope;
 use openidconnect::TokenResponse;
-use openidconnect::{
-    AccessTokenHash, CsrfToken, Nonce, PkceCodeChallenge, PkceCodeVerifier, Scope,
-};
 use rorm::crud::query::QueryBuilder;
 use rorm::insert;
 use rorm::prelude::ForeignModelByField;
 use rorm::FieldAccess;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
+
+use crate::handler::schema::FinishLoginOidcRequest;
+use crate::AuthModels;
+use crate::AuthModule;
 
 #[post("/login/oidc/start", core_crate = "::galvyn_core")]
 pub async fn login_oidc<M: AuthModels>(session: Session) -> ApiResult<Redirect> {

@@ -1,10 +1,15 @@
-use crate::models::{LocalAccount, WebAuthnKey};
-use crate::{AuthModule, MaybeAttestedPasskey};
 use galvyn_core::re_exports::axum::Json;
 use galvyn_core::session::Session;
-use galvyn_core::stuff::api_error::{ApiError, ApiResult};
+use galvyn_core::stuff::api_error::ApiError;
+use galvyn_core::stuff::api_error::ApiResult;
 use galvyn_core::Module;
-use galvyn_macros::{delete, put};
+use galvyn_macros::delete;
+use galvyn_macros::put;
+
+use crate::models::LocalAccount;
+use crate::models::WebAuthnKey;
+use crate::AuthModule;
+use crate::MaybeAttestedPasskey;
 
 type SetLocalPasswordRequest = String;
 

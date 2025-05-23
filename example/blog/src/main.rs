@@ -3,13 +3,15 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 
 use galvyn::contrib::auth::AuthModule;
-use galvyn::rorm::Database;
-use galvyn::{get, Galvyn};
-
-use galvyn::core::re_exports::axum::response::{IntoResponse, Response};
+use galvyn::core::re_exports::axum::response::IntoResponse;
+use galvyn::core::re_exports::axum::response::Response;
 use galvyn::core::re_exports::axum::Json;
-use galvyn::core::{GalvynRouter, Module};
+use galvyn::core::GalvynRouter;
+use galvyn::core::Module;
+use galvyn::get;
 use galvyn::openapi::OpenapiRouterExt;
+use galvyn::rorm::Database;
+use galvyn::Galvyn;
 
 #[get("/index")]
 async fn test<const N: usize, T: 'static>() -> String {

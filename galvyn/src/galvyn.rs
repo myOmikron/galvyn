@@ -1,18 +1,21 @@
-use crate::core::Module;
-use crate::error::GalvynError;
+use std::mem;
+use std::net::SocketAddr;
+use std::sync::RwLock;
+
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::session;
 use galvyn_core::GalvynRouter;
-use std::mem;
-use std::net::SocketAddr;
-use std::sync::RwLock;
 use tokio::net::TcpListener;
+use tracing::debug;
+use tracing::info;
 use tracing::Level;
-use tracing::{debug, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
+
+use crate::core::Module;
+use crate::error::GalvynError;
 
 #[non_exhaustive]
 pub struct Galvyn;

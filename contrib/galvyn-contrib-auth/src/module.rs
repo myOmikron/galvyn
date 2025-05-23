@@ -1,17 +1,31 @@
-use crate::handler;
-use galvyn_core::{GalvynRouter, InitError, Module, PreInitError};
+use std::fs;
+use std::future::ready;
+use std::future::Future;
+use std::io;
+use std::path::PathBuf;
+
+use galvyn_core::GalvynRouter;
+use galvyn_core::InitError;
+use galvyn_core::Module;
+use galvyn_core::PreInitError;
 #[cfg(feature = "oidc")]
-use openidconnect::core::{CoreClient as OidcClient, CoreProviderMetadata};
+use openidconnect::core::CoreClient as OidcClient;
+#[cfg(feature = "oidc")]
+use openidconnect::core::CoreProviderMetadata;
 #[cfg(feature = "oidc")]
 use openidconnect::reqwest::async_http_client;
-use openidconnect::{ClientId, ClientSecret, IssuerUrl};
+use openidconnect::ClientId;
+use openidconnect::ClientSecret;
+use openidconnect::IssuerUrl;
 use rorm::Database;
-use serde::{Deserialize, Serialize};
-use std::future::{ready, Future};
-use std::path::PathBuf;
-use std::{fs, io};
-use webauthn_rs::prelude::{AttestationCaList, Url};
-use webauthn_rs::{Webauthn, WebauthnBuilder};
+use serde::Deserialize;
+use serde::Serialize;
+use webauthn_rs::prelude::AttestationCaList;
+use webauthn_rs::prelude::Url;
+use webauthn_rs::Webauthn;
+use webauthn_rs::WebauthnBuilder;
+
+use crate::handler;
 
 #[cfg(not(feature = "oidc"))]
 type OidcClient = ();

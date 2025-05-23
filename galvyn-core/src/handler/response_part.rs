@@ -1,5 +1,7 @@
-use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
 use axum::http::HeaderName;
+
+use crate::macro_utils::type_metadata::HasMetadata;
+use crate::macro_utils::type_metadata::ShouldHaveMetadata;
 
 /// Describes the behaviour of a type implementing [`IntoResponseParts`](axum::response::IntoResponseParts)
 pub trait ResponsePart: ShouldBeResponsePart {

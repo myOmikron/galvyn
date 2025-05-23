@@ -6,10 +6,13 @@
 pub struct SchemalessJson<T>(pub T);
 
 mod axum_impls {
-    use crate::SchemalessJson;
-    use axum::extract::{FromRequest, Request};
-    use axum::response::{IntoResponse, Response};
     use axum::Json;
+    use axum::extract::FromRequest;
+    use axum::extract::Request;
+    use axum::response::IntoResponse;
+    use axum::response::Response;
+
+    use crate::SchemalessJson;
 
     impl<T, S: Sync> FromRequest<S> for SchemalessJson<T>
     where
@@ -35,13 +38,16 @@ mod axum_impls {
 }
 
 mod galvyn_impls {
-    use crate::handler::request_body::{RequestBody, ShouldBeRequestBody};
-    use crate::handler::response_body::{ResponseBody, ShouldBeResponseBody};
-    use crate::schema_generator::SchemaGenerator;
-    use crate::SchemalessJson;
     use axum::http::StatusCode;
     use mime::Mime;
     use schemars::schema::Schema;
+
+    use crate::SchemalessJson;
+    use crate::handler::request_body::RequestBody;
+    use crate::handler::request_body::ShouldBeRequestBody;
+    use crate::handler::response_body::ResponseBody;
+    use crate::handler::response_body::ShouldBeResponseBody;
+    use crate::schema_generator::SchemaGenerator;
 
     impl<T> ShouldBeRequestBody for SchemalessJson<T> {}
     impl<T> RequestBody for SchemalessJson<T> {

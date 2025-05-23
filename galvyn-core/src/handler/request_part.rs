@@ -1,6 +1,8 @@
-use crate::macro_utils::type_metadata::{HasMetadata, ShouldHaveMetadata};
-use crate::schema_generator::SchemaGenerator;
 use schemars::schema::Schema;
+
+use crate::macro_utils::type_metadata::HasMetadata;
+use crate::macro_utils::type_metadata::ShouldHaveMetadata;
+use crate::schema_generator::SchemaGenerator;
 
 /// Describes the behaviour of a type implementing [`FromRequestParts`](axum::extract::FromRequestParts)
 pub trait RequestPart: ShouldBeRequestPart {
