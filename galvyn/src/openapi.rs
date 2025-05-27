@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 
 use axum::http::Method;
 use galvyn_core::re_exports::schemars;
-use galvyn_core::router::{GalvynRoute, RouteExtension};
+use galvyn_core::router::{GalvynRoute, RouteMetadata};
 use galvyn_core::schema_generator::SchemaGenerator;
 use galvyn_core::GalvynRouter;
 use openapiv3::Components;
@@ -40,13 +40,13 @@ pub trait OpenapiRouterExt {
     fn with_openapi_tag(tag: &'static str) -> Self;
 }
 
-/// A [`RouteExtension`] containing openapi related metadata
+/// Openapi related [`RouteMetadata`]
 #[derive(Debug, Clone, Default)]
-pub struct OpenapiExtension {
+pub struct OpenapiMetadata {
     pub tags: Vec<&'static str>,
 }
 
-impl RouteExtension for OpenapiExtension {
+impl RouteMetadata for OpenapiMetadata {
     fn merge(&mut self, other: &Self) {
         for tag in &other.tags {
             if !self.tags.contains(tag) {
@@ -58,7 +58,7 @@ impl RouteExtension for OpenapiExtension {
 
 impl OpenapiRouterExt for GalvynRouter {
     fn openapi_tag(self, tag: &'static str) -> Self {
-        self.extension(OpenapiExtension { tags: vec![tag] })
+        self.metadata(OpenapiMetadata { tags: vec![tag] })
     }
 
     fn with_openapi_tag(tag: &'static str) -> Self {
@@ -79,7 +79,7 @@ fn generate_openapi() -> OpenAPI {
         let openapi_ext = route
             .extensions
             .get()
-            .unwrap_or(const { &OpenapiExtension { tags: Vec::new() } });
+            .unwrap_or(const { &OpenapiMetadata { tags: Vec::new() } });
 
         let ReferenceOr::Item(path) = paths
             .paths

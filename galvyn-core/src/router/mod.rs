@@ -7,12 +7,12 @@ use axum::routing::Router;
 use tower::Layer;
 use tower::Service;
 
-pub use self::extension::RouteExtension;
-pub use self::extension::RouteExtensions;
+pub use self::metadata::RouteMetadata;
+pub use self::metadata::RouteMetadataSet;
 use crate::handler::GalvynHandler;
 use crate::handler::HandlerMeta;
 
-mod extension;
+mod metadata;
 
 /// An `GalvynRouter` combines several [`SwaggapiHandler`] under a common path.
 ///
@@ -27,8 +27,8 @@ pub struct GalvynRouter {
     /// The underlying axum router
     router: Router,
 
-    /// Route extensions implicitly added to all routes added to this router
-    extensions: RouteExtensions,
+    /// Route metadata implicitly added to all routes added to this router
+    extensions: RouteMetadataSet,
 }
 
 impl GalvynRouter {
@@ -42,8 +42,8 @@ impl GalvynRouter {
     /// Creates a new router with an extension
     ///
     /// (Shorthand for `GalvynRouter::new().extension(...)`)
-    pub fn with_extension(extension: impl RouteExtension) -> Self {
-        Self::new().extension(extension)
+    pub fn with_extension(extension: impl RouteMetadata) -> Self {
+        Self::new().metadata(extension)
     }
 
     /// Adds a handler to the router
@@ -55,13 +55,13 @@ impl GalvynRouter {
         self
     }
 
-    /// Adds a `RouteExtension` to every handler added to this router.
+    /// Adds a `RouteMetadata` to every handler added to this router.
     ///
-    /// The extension will be added to all handlers,
+    /// The metadata will be added to all handlers,
     /// regardless of whether the handler was added before or after this method was called.
     ///
-    /// If an extension of this type has already been added then the two extensions will be merged.
-    pub fn extension(mut self, extension: impl RouteExtension) -> Self {
+    /// If metadata of this type has already been added then the two instances will be merged.
+    pub fn metadata(mut self, extension: impl RouteMetadata) -> Self {
         for handler in &mut self.handlers {
             handler.extensions.insert(extension.clone());
         }
@@ -162,7 +162,7 @@ pub struct GalvynRoute {
     /// Arbitrary additional meta information associated with the route
     ///
     /// For example openapi tags.
-    pub extensions: RouteExtensions,
+    pub extensions: RouteMetadataSet,
 }
 impl GalvynRoute {
     /// Constructs a new `GalvynRoute`
@@ -172,7 +172,7 @@ impl GalvynRoute {
             // tags: PtrSet::from_iter(original.tags.iter().copied()),
             // pages: PtrSet::new(),
             handler: original,
-            extensions: RouteExtensions::default(),
+            extensions: RouteMetadataSet::default(),
         }
     }
 }
