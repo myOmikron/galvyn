@@ -1,11 +1,9 @@
 use std::mem;
-use std::sync::OnceLock;
 
 use axum::http::Method;
 use galvyn_core::re_exports::schemars;
-use galvyn_core::router::{GalvynRoute, RouteMetadata};
+use galvyn_core::router::GalvynRoute;
 use galvyn_core::schema_generator::SchemaGenerator;
-use galvyn_core::GalvynRouter;
 use openapiv3::Components;
 use openapiv3::Info;
 use openapiv3::MediaType;
@@ -25,53 +23,9 @@ use tracing::debug;
 use tracing::warn;
 
 use crate::get_routes;
+use crate::openapi::OpenapiMetadata;
 
-/// Extension trait for [`GalvynRouter`]
-///
-/// It provides convenient methods for adding openapi related metadata
-/// to a route. (For example tags)
-pub trait OpenapiRouterExt {
-    /// Adds a tag to all handlers in this router
-    fn openapi_tag(self, tag: &'static str) -> Self;
-
-    /// Creates a new router with a tag
-    ///
-    /// (Shorthand for `GalvynRouter::new().openapi_tag(...)`)
-    fn with_openapi_tag(tag: &'static str) -> Self;
-}
-
-/// Openapi related [`RouteMetadata`]
-#[derive(Debug, Clone, Default)]
-pub struct OpenapiMetadata {
-    pub tags: Vec<&'static str>,
-}
-
-impl RouteMetadata for OpenapiMetadata {
-    fn merge(&mut self, other: &Self) {
-        for tag in &other.tags {
-            if !self.tags.contains(tag) {
-                self.tags.push(tag);
-            }
-        }
-    }
-}
-
-impl OpenapiRouterExt for GalvynRouter {
-    fn openapi_tag(self, tag: &'static str) -> Self {
-        self.metadata(OpenapiMetadata { tags: vec![tag] })
-    }
-
-    fn with_openapi_tag(tag: &'static str) -> Self {
-        Self::new().openapi_tag(tag)
-    }
-}
-
-pub fn get_openapi() -> &'static OpenAPI {
-    static OPENAPI: OnceLock<OpenAPI> = OnceLock::new();
-    OPENAPI.get_or_init(generate_openapi)
-}
-
-fn generate_openapi() -> OpenAPI {
+pub fn generate_openapi() -> OpenAPI {
     let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
 
