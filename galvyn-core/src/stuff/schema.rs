@@ -44,6 +44,9 @@ pub struct ApiErrorResponse {
     ///
     /// May be used for displaying purposes
     pub message: String,
+
+    /// Optional span id for referencing errors
+    pub span_id: Option<String>,
 }
 
 /// A type without any runtime value

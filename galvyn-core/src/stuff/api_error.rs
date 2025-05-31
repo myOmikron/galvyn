@@ -11,6 +11,7 @@ use axum::response::Response;
 use rorm::crud::update::UpdateBuilder;
 use schemars::schema::Schema;
 use thiserror::Error;
+use tracing::Span;
 use tracing::debug;
 use tracing::error;
 
@@ -35,6 +36,8 @@ pub struct ApiError {
     pub location: &'static Location<'static>,
     /// The error's underlying source
     pub source: Option<Box<dyn Error + Send + Sync + 'static>>,
+    /// The id of the span
+    pub span: Option<tracing::Id>,
 }
 
 impl fmt::Display for ApiError {
@@ -65,6 +68,7 @@ impl ApiError {
             context: Some(context),
             location: Location::caller(),
             source: None,
+            span: Span::current().id(),
         }
     }
 
@@ -108,6 +112,7 @@ impl ApiError {
             context,
             location,
             source,
+            ..
         } = &self;
 
         match code {
@@ -153,6 +158,7 @@ impl IntoResponse for ApiError {
                 StatusCode::INTERNAL_SERVER_ERROR
             },
             ApiJson(ApiErrorResponse {
+                span_id: self.span.map(|id| id.into_u64().to_string()),
                 status_code: self.code,
                 message: match self.code {
                     ApiStatusCode::Unauthenticated => "Unauthenticated",
@@ -205,6 +211,7 @@ macro_rules! impl_into_internal_server_error {
             #[track_caller]
             fn from(value: $error) -> Self {
                 Self {
+                    span: Span::current().id(),
                     code: ApiStatusCode::InternalServerError,
                     context: None,
                     location: Location::caller(),
