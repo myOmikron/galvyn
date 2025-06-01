@@ -8,11 +8,14 @@ use std::panic::Location;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::response::Response;
+use opentelemetry::trace::TraceContextExt;
 use rorm::crud::update::UpdateBuilder;
 use schemars::schema::Schema;
 use thiserror::Error;
+use tracing::Span;
 use tracing::debug;
 use tracing::error;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
@@ -36,7 +39,7 @@ pub struct ApiError {
     /// The error's underlying source
     pub source: Option<Box<dyn Error + Send + Sync + 'static>>,
     /// The id of the trace
-    pub trace_id: Option<String>,
+    pub trace_id: String,
 }
 
 impl fmt::Display for ApiError {
@@ -62,24 +65,19 @@ impl ApiError {
     /// Constructs a new `ApiError`
     #[track_caller]
     pub fn new(code: ApiStatusCode, context: &'static str) -> Self {
-        Self {
-            code,
-            context: Some(context),
-            location: Location::caller(),
-            source: None,
-            trace_id: None,
-        }
-    }
+        let trace_id = Span::current()
+            .context()
+            .span()
+            .span_context()
+            .trace_id()
+            .to_string();
 
-    /// Constructs a new `ApiError`
-    #[track_caller]
-    pub fn new_with_trace(code: ApiStatusCode, context: &'static str, trace_id: String) -> Self {
         Self {
             code,
             context: Some(context),
             location: Location::caller(),
             source: None,
-            trace_id: Some(trace_id),
+            trace_id,
         }
     }
 
@@ -93,12 +91,6 @@ impl ApiError {
     #[track_caller]
     pub fn server_error(context: &'static str) -> Self {
         Self::new(ApiStatusCode::InternalServerError, context)
-    }
-
-    /// Constructs a new `ApiError` with [`ApiStatusCode::InternalServerError`]
-    #[track_caller]
-    pub fn server_error_trace(context: &'static str, trace_id: String) -> Self {
-        Self::new_with_trace(ApiStatusCode::InternalServerError, context, trace_id)
     }
 
     /// Adds a source to the `ApiError`
@@ -120,17 +112,6 @@ impl ApiError {
         context: &'static str,
     ) -> impl Fn(E) -> Self {
         move |error| Self::server_error(context).with_source(error)
-    }
-
-    /// Creates a closure for wrapping any error into an `ApiError::server_error`
-    ///
-    /// This is just a less noisy shorthand for `|error| ApiError::server_error("...").with_source(error)`.
-    #[track_caller]
-    pub fn map_server_error_trace<E: Error + Send + Sync + 'static>(
-        context: &'static str,
-        trace_id: String,
-    ) -> impl FnOnce(E) -> Self {
-        move |error| Self::server_error_trace(context, trace_id).with_source(error)
     }
 
     /// Emit a tracing event `error!` or `debug!` describing the `ApiError`
@@ -238,8 +219,16 @@ macro_rules! impl_into_internal_server_error {
         impl From<$error> for ApiError {
             #[track_caller]
             fn from(value: $error) -> Self {
+                let trace_id = Span::current()
+                    .context()
+                    .span()
+                    .span_context()
+                    .trace_id()
+                    .to_string();
+
+
                 Self {
-                    trace_id: None,
+                    trace_id,
                     code: ApiStatusCode::InternalServerError,
                     context: None,
                     location: Location::caller(),

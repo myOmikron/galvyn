@@ -6,8 +6,10 @@ pub use crate::module::*;
 pub mod re_exports {
     pub use axum;
     pub use mime;
+    pub use opentelemetry;
     pub use rorm;
     pub use schemars;
+    pub use tracing_opentelemetry;
     pub use uuid;
 }
 

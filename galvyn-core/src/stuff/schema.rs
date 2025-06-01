@@ -46,7 +46,7 @@ pub struct ApiErrorResponse {
     pub message: String,
 
     /// Optional trace id for referencing errors
-    pub trace_id: Option<String>,
+    pub trace_id: String,
 }
 
 /// A type without any runtime value
