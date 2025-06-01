@@ -186,7 +186,7 @@ impl IntoResponse for ApiError {
                 StatusCode::INTERNAL_SERVER_ERROR
             },
             ApiJson(ApiErrorResponse {
-                trace_id: self.trace_id.map(|id| format!("{id:x?}")),
+                trace_id: self.trace_id,
                 status_code: self.code,
                 message: match self.code {
                     ApiStatusCode::Unauthenticated => "Unauthenticated",
