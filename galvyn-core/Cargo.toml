@@ -14,7 +14,7 @@ mime = { version = "~0.3" }
 serde = { version = "~1" }
 serde_json = { version = "~1" }
 serde_repr = { version = "~0.1" }
-schemars = { version = "~0.8", features = ["uuid1"] }
+schemars = { workspace = true, features = ["uuid1"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }
 tracing = { version = "~0.1" }

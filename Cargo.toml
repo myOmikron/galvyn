@@ -15,3 +15,4 @@ axum = { version = "~0.8", default-features = false }
 rorm = { version = "~0.7", default-features = false }
 rorm-macro-impl = { version = "~0.9" }
 tokio = { version = ">=1.44.2", default-features = false }
+schemars = { version = "~0.8", default-features = false }
