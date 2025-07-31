@@ -13,6 +13,9 @@ mod metadata;
 mod router_ext;
 
 /// Auto-generates an openapi document for your application
+///
+/// # Panics
+/// If galvyn has not been started yet.
 pub fn get_openapi() -> &'static OpenAPI {
     static OPENAPI: OnceLock<OpenAPI> = OnceLock::new();
     OPENAPI.get_or_init(generate_openapi)

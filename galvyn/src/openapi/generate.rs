@@ -22,14 +22,14 @@ use openapiv3::StatusCode;
 use tracing::debug;
 use tracing::warn;
 
-use crate::get_routes;
 use crate::openapi::OpenapiMetadata;
+use crate::Galvyn;
 
 pub fn generate_openapi() -> OpenAPI {
     let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
 
-    for route in get_routes() {
+    for route in Galvyn::global().get_routes() {
         let openapi_ext = route
             .extensions
             .get()

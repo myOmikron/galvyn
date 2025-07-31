@@ -1,6 +1,7 @@
+use std::io;
 use std::mem;
 use std::net::SocketAddr;
-use std::sync::RwLock;
+use std::sync::OnceLock;
 
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
@@ -17,12 +18,43 @@ use tracing_subscriber::EnvFilter;
 use crate::core::Module;
 use crate::error::GalvynError;
 
+/// Global handle to the running galvyn server
+///
+/// Start creating your server by calling [`Galvyn::new`].
 #[non_exhaustive]
-pub struct Galvyn;
+pub struct Galvyn {
+    routes: Vec<GalvynRoute>,
+}
 
 impl Galvyn {
+    /// Constructs the builder to initialize and start `Galvyn`
     pub fn new() -> ModuleBuilder {
         ModuleBuilder::new()
+    }
+
+    /// Gets the global `Galvyn` instance
+    ///
+    /// This method should be used after [`RouterBuilder::start`] has been called.
+    /// I.e. after the webserver has been started, while it is running.
+    ///
+    /// # Panics
+    /// If galvyn has not been started yet.
+    pub fn global() -> &'static Self {
+        Self::try_global().unwrap_or_else(|| panic!("Galvyn has not been started yet."))
+    }
+
+    /// Gets the global `Galvyn` instance
+    ///
+    /// # None
+    /// If galvyn has not been started yet.
+    pub fn try_global() -> Option<&'static Self> {
+        INSTANCE.get()
+    }
+
+    /// Quick and dirty solution to expose the registered handlers after startup
+    #[doc(hidden)]
+    pub fn get_routes(&self) -> &[GalvynRoute] {
+        &self.routes
     }
 }
 
@@ -77,9 +109,10 @@ impl RouterBuilder {
 
     /// Starts the webserver
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
-        let (router, handlers) = mem::take(&mut self.routes).finish();
+        let (router, routes) = mem::take(&mut self.routes).finish();
 
-        *HANDLERS.write().unwrap() = handlers.leak();
+        INSTANCE.set(Galvyn { routes })
+            .unwrap_or_else(|_| panic!("Galvyn has already been started. There can't be more than one instance per process."));
 
         let socket = TcpListener::bind(socket_addr).await?;
 
@@ -97,10 +130,4 @@ impl RouterBuilder {
     }
 }
 
-static HANDLERS: RwLock<&'static [GalvynRoute]> = RwLock::new(&[]);
-
-/// Quick and dirty solution to expose the registered handlers after startup
-#[doc(hidden)]
-pub fn get_routes() -> &'static [GalvynRoute] {
-    *HANDLERS.read().unwrap()
-}
+static INSTANCE: OnceLock<Galvyn> = OnceLock::new();
