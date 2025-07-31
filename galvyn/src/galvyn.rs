@@ -1,13 +1,16 @@
-use std::io;
+use std::convert::Infallible;
 use std::mem;
 use std::net::SocketAddr;
 use std::sync::OnceLock;
+use std::sync::PoisonError;
+use std::sync::RwLock;
 
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::session;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
+use tokio::sync::oneshot;
 use tracing::debug;
 use tracing::info;
 use tracing::Level;
@@ -24,6 +27,7 @@ use crate::error::GalvynError;
 #[non_exhaustive]
 pub struct Galvyn {
     routes: Vec<GalvynRoute>,
+    shutdown: RwLock<Option<oneshot::Sender<Infallible>>>,
 }
 
 impl Galvyn {
@@ -55,6 +59,15 @@ impl Galvyn {
     #[doc(hidden)]
     pub fn get_routes(&self) -> &[GalvynRoute] {
         &self.routes
+    }
+
+    /// Attempts to shut down the server gracefully
+    pub fn shutdown(&self) {
+        let mut shutdown_tx = self
+            .shutdown
+            .write()
+            .unwrap_or_else(PoisonError::into_inner);
+        shutdown_tx.take();
     }
 }
 
@@ -111,7 +124,12 @@ impl RouterBuilder {
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
         let (router, routes) = mem::take(&mut self.routes).finish();
 
-        INSTANCE.set(Galvyn { routes })
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        INSTANCE.set(Galvyn {
+            routes,
+            shutdown: RwLock::new(Some(shutdown_tx)),
+        })
             .unwrap_or_else(|_| panic!("Galvyn has already been started. There can't be more than one instance per process."));
 
         let socket = TcpListener::bind(socket_addr).await?;
@@ -119,12 +137,22 @@ impl RouterBuilder {
         info!("Starting to serve webserver on http://{socket_addr}");
         let serve_future = axum::serve(socket, router.layer(session::layer()));
 
-        debug!("Registering signals for graceful shutdown");
         #[cfg(feature = "graceful-shutdown")]
-        let serve_future =
-            serve_future.with_graceful_shutdown(crate::graceful_shutdown::wait_for_signal()?);
+        let signal = {
+            debug!("Registering signals for graceful shutdown");
+            crate::graceful_shutdown::wait_for_signal()?
+        };
+        #[cfg(not(feature = "graceful-shutdown"))]
+        let signal = std::future::pending::<()>();
 
-        serve_future.await?;
+        serve_future
+            .with_graceful_shutdown(async move {
+                tokio::select! {
+                    _ = signal => (),
+                    _ = shutdown_rx => (),
+                }
+            })
+            .await?;
 
         Ok(())
     }

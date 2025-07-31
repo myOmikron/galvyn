@@ -10,6 +10,7 @@ use galvyn::core::GalvynRouter;
 use galvyn::core::Module;
 use galvyn::get;
 use galvyn::openapi::OpenapiRouterExt;
+use galvyn::post;
 use galvyn::rorm::Database;
 use galvyn::Galvyn;
 
@@ -21,6 +22,11 @@ async fn test<const N: usize, T: 'static>() -> String {
 #[get("/openapi")]
 async fn openapi() -> Response {
     Json(galvyn::openapi::get_openapi()).into_response()
+}
+
+#[post("/shutdown")]
+async fn shutdown() {
+    Galvyn::global().shutdown();
 }
 
 #[tokio::main]
@@ -38,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             GalvynRouter::new()
                 .openapi_tag("Main")
                 .handler(test::<1337, ()>)
+                .handler(shutdown)
                 .handler(openapi),
         )
         .start(SocketAddr::from_str("127.0.0.1:8080")?)
