@@ -14,6 +14,7 @@ pub mod re_exports {
 pub mod handler;
 #[doc(hidden)]
 pub mod macro_utils;
+pub mod middleware;
 pub mod module;
 #[doc(hidden)]
 pub mod router;

@@ -11,6 +11,7 @@ pub use self::metadata::RouteMetadata;
 pub use self::metadata::RouteMetadataSet;
 use crate::handler::GalvynHandler;
 use crate::handler::HandlerMeta;
+use crate::middleware::GalvynMiddleware;
 
 mod metadata;
 
@@ -115,7 +116,19 @@ impl GalvynRouter {
         self
     }
 
+    /// Wraps all routes in the router with a `GalvynMiddleware`
+    ///
+    /// If you want to apply a [`tower::Layer`], you can use [`GalvynRouter::layer`] instead.
+    ///
+    /// See [`Router::layer`] for more details.
+    pub fn wrap(mut self, middleware: impl GalvynMiddleware) -> Self {
+        self.router = self.router.layer(middleware.into_layer());
+        self
+    }
+
     /// Apply a [`tower::Layer`] to all routes in the router.
+    ///
+    /// If you want to apply a [`GalvynMiddleware`], you can use [`GalvynRouter::wrap`] instead.
     ///
     /// See [`Router::layer`] for more details.
     pub fn layer<L>(mut self, layer: L) -> Self
