@@ -1,7 +1,8 @@
 //! [`GalvynRouter`] extension trait
 
-use crate::openapi::metadata::OpenapiMetadata;
 use galvyn_core::GalvynRouter;
+
+use crate::openapi::metadata::OpenapiMetadata;
 
 /// Extension trait for [`GalvynRouter`]
 ///
