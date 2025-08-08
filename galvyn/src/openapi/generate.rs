@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::mem;
 
 use axum::http::Method;
@@ -25,15 +26,18 @@ use tracing::warn;
 use crate::openapi::OpenapiMetadata;
 use crate::Galvyn;
 
-pub fn generate_openapi() -> OpenAPI {
+pub fn generate_openapi(page: Option<TypeId>) -> OpenAPI {
     let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
+    let default_metadata = OpenapiMetadata::default();
 
     for route in Galvyn::global().get_routes() {
-        let openapi_ext = route
-            .extensions
-            .get()
-            .unwrap_or(const { &OpenapiMetadata { tags: Vec::new() } });
+        let openapi_ext = route.extensions.get().unwrap_or(&default_metadata);
+        if let Some(page) = &page {
+            if !openapi_ext.pages.contains(&page) {
+                continue;
+            }
+        }
 
         let ReferenceOr::Item(path) = paths
             .paths
