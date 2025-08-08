@@ -17,5 +17,10 @@ impl RouteMetadata for OpenapiMetadata {
                 self.tags.push(tag);
             }
         }
+        for page in &other.pages {
+            if !self.pages.contains(page) {
+                self.pages.push(*page);
+            }
+        }
     }
 }
