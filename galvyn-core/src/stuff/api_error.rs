@@ -214,4 +214,4 @@ macro_rules! impl_into_internal_server_error {
         }
     )+};
 }
-impl_into_internal_server_error!(rorm::Error, tower_sessions::session::Error,);
+impl_into_internal_server_error!(rorm::Error, tower_sessions::session::Error, anyhow::Error,);
