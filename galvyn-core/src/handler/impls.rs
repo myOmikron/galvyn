@@ -53,17 +53,13 @@ impl<T: DeserializeOwned + JsonSchema> RequestBody for Json<T> {
 }
 
 impl<T> ShouldBeRequestBody for Form<T> {}
-/*
-impl<T: DeserializeOwned + JsonSchema> HandlerArgument for Form<T> {
-    fn request_body(generator: &mut SchemaGenerator) -> Option<RequestBody> {
-        let schema = convert_schema(gen.generate::<T>());
-        Some(simple_request_body(SimpleRequestBody {
-            mime_type: mime::APPLICATION_WWW_FORM_URLENCODED,
-            schema: Some(schema),
-        }))
+
+impl<T: DeserializeOwned + JsonSchema> RequestBody for Form<T> {
+    fn body(generator: &mut SchemaGenerator) -> (Mime, Option<Schema>) {
+        (mime::APPLICATION_WWW_FORM_URLENCODED, Some(generator.generate::<T>()))
     }
 }
-*/
+
 
 impl ShouldBeRequestBody for RawForm {}
 /*
