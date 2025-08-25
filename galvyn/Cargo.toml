@@ -33,8 +33,6 @@ futures-lite = { version = "~2", default-features = false, features = ["alloc"] 
 tracing = { version = "~0.1" }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
-tracing-serde = { version = "~0.2" } # TODO: write custom
-
 # TODO: make optional
 tracing-forest = { version = "~0.2", features = ["ansi", "tokio", "smallvec", "chrono"] }
 tracing-opentelemetry = { version = "0.25" }

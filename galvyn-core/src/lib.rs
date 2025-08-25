@@ -8,7 +8,6 @@ pub mod re_exports {
     pub use mime;
     pub use rorm;
     pub use schemars;
-    pub use serde;
     pub use time;
     pub use uuid;
 }

@@ -1,17 +1,16 @@
-use galvyn_core::re_exports::serde::ser::{SerializeMap, Serializer};
+use galvyn_core::re_exports::time::format_description::well_known::Rfc3339;
 use galvyn_core::re_exports::time::OffsetDateTime;
-use galvyn_core::stuff::schema::SchemaDateTime;
-use opentelemetry::global::ObjectSafeSpan;
 use opentelemetry::trace::{TraceContextExt, TraceError, TracerProvider};
 use opentelemetry::{Key, KeyValue, Value};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{runtime, trace, Resource};
 use reqwest::Url;
+use std::fmt::Debug;
 use std::time::Duration;
 use std::{fmt, io, mem};
+use tracing::field::Field;
 use tracing::{warn, Event, Span, Subscriber};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
-use tracing_serde::SerdeMapVisitor;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields, MakeWriter};
 use tracing_subscriber::registry::LookupSpan;
@@ -88,43 +87,72 @@ where
     where
         S: Subscriber + for<'a> LookupSpan<'a>,
     {
-        let ts = SchemaDateTime(OffsetDateTime::now_utc());
+        #[derive(Default)]
+        struct JsonVisitor(serde_json::Map<String, serde_json::Value>);
+        impl JsonVisitor {
+            fn insert(&mut self, key: impl ToString, value: impl Into<serde_json::Value>) {
+                self.0.insert(key.to_string(), value.into());
+            }
+            fn finish(self) -> serde_json::Value {
+                serde_json::Value::Object(self.0)
+            }
+        }
+        impl tracing::field::Visit for JsonVisitor {
+            fn record_f64(&mut self, field: &Field, value: f64) {
+                self.insert(field.name(), value);
+            }
+
+            fn record_i64(&mut self, field: &Field, value: i64) {
+                self.insert(field.name(), value);
+            }
+
+            fn record_u64(&mut self, field: &Field, value: u64) {
+                self.insert(field.name(), value);
+            }
+
+            fn record_bool(&mut self, field: &Field, value: bool) {
+                self.insert(field.name(), value);
+            }
+
+            fn record_str(&mut self, field: &Field, value: &str) {
+                self.insert(field.name(), value);
+            }
+
+            fn record_debug(&mut self, field: &Field, value: &dyn Debug) {
+                self.insert(field.name(), format!("{value:?}"));
+            }
+        }
+
         let meta = event.metadata();
 
-        let mut visit = || {
-            let mut outer_serializer = serde_json::Serializer::new(WriteAdaptor {
-                fmt_write: &mut writer,
-            });
+        let mut json = JsonVisitor::default();
+        json.insert(
+            "timestamp",
+            OffsetDateTime::now_utc()
+                .format(&Rfc3339)
+                .unwrap_or_else(|_| "ERROR".to_string()),
+        );
+        json.insert("level", meta.level().to_string());
+        json.insert("target", meta.target().to_string());
+        if let Some(filename) = meta.file() {
+            json.insert("filename", filename.to_string());
+        }
+        if let Some(line_number) = meta.line() {
+            json.insert("line_number", line_number);
+        }
 
-            let mut serializer = outer_serializer.serialize_map(None)?;
-            serializer.serialize_entry("service_name", self.service_name.as_str())?;
-            serializer.serialize_entry("timestamp", &ts)?;
-            serializer.serialize_entry("level", meta.level().to_string().as_str())?;
+        let current_span = Span::current();
+        let otel_context = current_span.context().span().span_context().clone();
+        json.insert("trace_id", otel_context.trace_id().to_string());
+        json.insert("span_id", otel_context.span_id().to_string());
+        json.insert("service_name", self.service_name.clone());
+        if let Some(metadata) = current_span.metadata() {
+            json.insert("span_name", metadata.name().to_string());
+        }
 
-            let current_span = Span::current();
-            let otel_context = current_span.context().span().span_context().clone();
-            serializer.serialize_entry("trace_id", &otel_context.trace_id().to_string())?;
-            serializer.serialize_entry("span_id", &otel_context.span_id().to_string())?;
+        event.record(&mut json);
 
-            let mut visitor = SerdeMapVisitor::new(serializer);
-            event.record(&mut visitor);
-            serializer = visitor.take_serializer()?;
-
-            serializer.serialize_entry("target", meta.target())?;
-            if let Some(filename) = meta.file() {
-                serializer.serialize_entry("filename", filename)?;
-            }
-            if let Some(line_number) = meta.line() {
-                serializer.serialize_entry("line_number", &line_number)?;
-            }
-            if let Some(metadata) = current_span.metadata() {
-                serializer.serialize_entry("span_name", metadata.name())?;
-            }
-            serializer.end()
-        };
-
-        visit().map_err(|_| fmt::Error)?;
-        writeln!(writer)
+        writeln!(writer, "{}", json.finish())
     }
 }
 
@@ -192,23 +220,5 @@ impl Drop for AlloyWriter {
                 );
             }
         });
-    }
-}
-
-/// Bridge between [`fmt::Write`] and [`io::Write`].
-struct WriteAdaptor<'a> {
-    fmt_write: &'a mut dyn fmt::Write,
-}
-impl io::Write for WriteAdaptor<'_> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        // TODO: fix buf might not be valid utf8
-        let s =
-            std::str::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        self.fmt_write.write_str(s).map_err(io::Error::other)?;
-        Ok(s.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
