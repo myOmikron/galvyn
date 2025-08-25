@@ -33,6 +33,16 @@ futures-lite = { version = "~2", default-features = false, features = ["alloc"] 
 tracing = { version = "~0.1" }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
+tracing-serde = { version = "~0.2" } # TODO: write custom
+
+# TODO: make optional
+tracing-forest = { version = "~0.2", features = ["ansi", "tokio", "smallvec", "chrono"] }
+tracing-opentelemetry = { version = "0.25" }
+opentelemetry = { version = "0.24" }
+opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.17" }
+reqwest = { version = "~0.12" }
+
 galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
 openapiv3 = { version = "~2", optional = true }
 serde_json = { version = "~1", optional = true }

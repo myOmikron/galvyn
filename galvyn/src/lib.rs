@@ -30,5 +30,6 @@ mod macro_docs;
 pub mod openapi;
 #[cfg(feature = "panic-hook")]
 pub mod panic_hook;
+pub mod tracing;
 
 pub use macro_docs::*;
