@@ -1,14 +1,14 @@
 use galvyn_core::re_exports::time::format_description::well_known::Rfc3339;
 use galvyn_core::re_exports::time::OffsetDateTime;
 
-use opentelemetry::trace::TraceContextExt;
+use opentelemetry::trace::{SpanContext, TraceContextExt};
 use reqwest::Url;
 use std::fmt::Debug;
 use std::time::Duration;
 use std::{fmt, io, mem};
 use tracing::field::Field;
-use tracing::{warn, Event, Span, Subscriber};
-use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing::{warn, Event, Subscriber};
+use tracing_opentelemetry::OtelData;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields, MakeWriter};
 use tracing_subscriber::registry::LookupSpan;
@@ -47,7 +47,7 @@ where
 {
     fn format_event(
         &self,
-        _ctx: &FmtContext<'_, S, N>,
+        ctx: &FmtContext<'_, S, N>,
         mut writer: Writer<'_>,
         event: &Event<'_>,
     ) -> fmt::Result
@@ -108,13 +108,20 @@ where
             json.insert("line_number", line_number);
         }
 
-        let current_span = Span::current();
-        let otel_context = current_span.context().span().span_context().clone();
+        let current_span = ctx.event_scope().and_then(|mut scope| scope.next());
+        let otel_context = current_span
+            .as_ref()
+            .and_then(|span| {
+                span.extensions()
+                    .get::<OtelData>()
+                    .map(|data| data.parent_cx.span().span_context().clone())
+            })
+            .unwrap_or(SpanContext::NONE);
         json.insert("trace_id", otel_context.trace_id().to_string());
         json.insert("span_id", otel_context.span_id().to_string());
         json.insert("service_name", self.service_name.clone());
-        if let Some(metadata) = current_span.metadata() {
-            json.insert("span_name", metadata.name().to_string());
+        if let Some(current_span) = current_span {
+            json.insert("span_name", current_span.metadata().name().to_string());
         }
 
         event.record(&mut json);
