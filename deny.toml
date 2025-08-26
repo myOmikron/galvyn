@@ -9,6 +9,9 @@ ignore = [
 
     # paste is unmaintained
     "RUSTSEC-2024-0436", # it is a tiny macro utility only used rmp internally and works for them
+
+    # ansi_term is unmaintained
+    "RUSTSEC-2021-0139", # tracing-forerst depends on it and an issues has alreay been created
 ]
 
 [licenses]
