@@ -1,3 +1,5 @@
+//! Helper for reading configuration from env variables
+
 use std::env;
 use std::env::VarError;
 use std::fmt;
@@ -11,11 +13,32 @@ use serde::de::Error;
 use serde::de::Visitor;
 use thiserror::Error;
 
-/// An environment variable used to configure truffleport
+/// An environment variable
+///
+/// # Example
+///
+/// ```rust
+/// # use galvyn_core::stuff::env::EnvVar;
+/// #
+/// // A required environment variable
+/// static DB_PWD: EnvVar = EnvVar::required("DB_PWD");
+///
+/// // An optional environment variable
+/// static DB_HOST: EnvVar = EnvVar::optional("HOST", || "localhost".to_string());
+///
+/// // An environment variable of a non-string type
+/// static DB_PORT: EnvVar<u16> = EnvVar::optional("PORT", || 5432);
 pub struct EnvVar<T = String> {
+    /// The read and deserialized value
     value: OnceLock<Result<T, EnvError>>,
 
+    /// The environment variable to read
     name: &'static str,
+
+    /// A function which produces a default value.
+    ///
+    /// The default is used if the variable is not set.
+    /// If this field ìs `None`, then the variable is required to be set.
     default: Option<fn() -> T>,
 }
 
