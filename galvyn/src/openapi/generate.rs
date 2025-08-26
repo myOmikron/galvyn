@@ -1,4 +1,3 @@
-use std::any::TypeId;
 use std::mem;
 
 use axum::http::Method;
@@ -23,18 +22,18 @@ use openapiv3::StatusCode;
 use tracing::debug;
 use tracing::warn;
 
-use crate::openapi::OpenapiMetadata;
+use crate::openapi::{OpenapiBuilder, OpenapiMetadata};
 use crate::Galvyn;
 
-pub fn generate_openapi(page: Option<TypeId>) -> OpenAPI {
+pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
     let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
     let default_metadata = OpenapiMetadata::default();
 
     for route in Galvyn::global().get_routes() {
         let openapi_ext = route.extensions.get().unwrap_or(&default_metadata);
-        if let Some(page) = &page {
-            if !openapi_ext.pages.contains(&page) {
+        if let Some(pages) = &builder.private.pages {
+            if !openapi_ext.pages.iter().any(|page| pages.contains(page)) {
                 continue;
             }
         }
@@ -74,7 +73,9 @@ pub fn generate_openapi(page: Option<TypeId>) -> OpenAPI {
         }
         operation.operation_id = Some(route.handler.ident.to_string());
         operation.deprecated = route.handler.deprecated;
-        operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
+        if !builder.omit_tags {
+            operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
+        }
 
         if let Some(response_body) = route.handler.response_body.as_ref() {
             for (status_code, body) in (response_body.body)(&mut schemas) {
