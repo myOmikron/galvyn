@@ -30,10 +30,27 @@ pub struct Galvyn {
     shutdown: RwLock<Option<oneshot::Sender<Infallible>>>,
 }
 
+/// General setup options for galvyn.
+///
+/// Most modules will provide their own setup options.
+#[derive(Default)]
+#[non_exhaustive]
+pub struct GalvynSetup {
+    /// Disables galvyn's session layer
+    ///
+    /// If you want to bring your own.
+    pub disable_sessions: bool,
+}
+
 impl Galvyn {
     /// Constructs the builder to initialize and start `Galvyn`
     pub fn new() -> ModuleBuilder {
-        ModuleBuilder::new()
+        Self::with_setup(Default::default())
+    }
+
+    /// Constructs the builder to initialize and start `Galvyn`
+    pub fn with_setup(setup: GalvynSetup) -> ModuleBuilder {
+        ModuleBuilder::new(setup)
     }
 
     /// Gets the global `Galvyn` instance
@@ -74,10 +91,11 @@ impl Galvyn {
 #[derive(Default)]
 pub struct ModuleBuilder {
     modules: RegistryBuilder,
+    setup: GalvynSetup,
 }
 
 impl ModuleBuilder {
-    fn new() -> ModuleBuilder {
+    fn new(setup: GalvynSetup) -> ModuleBuilder {
         #[cfg(feature = "panic-hook")]
         crate::panic_hook::set_panic_hook();
 
@@ -91,7 +109,10 @@ impl ModuleBuilder {
             debug!("Using external subscriber");
         }
 
-        ModuleBuilder::default()
+        ModuleBuilder {
+            modules: Default::default(),
+            setup,
+        }
     }
 
     /// Register a module
@@ -100,16 +121,23 @@ impl ModuleBuilder {
         self
     }
 
+    /// Initializes all modules and returns a builder for the routes
+    ///
+    /// This method takes `&mut self` for convenience.
+    /// The `ModuleBuilder` should not be used anymore after calling this method.
+    // (It won't cause any errors or panics, `self` will simply be "empty")
     pub async fn init_modules(&mut self) -> Result<RouterBuilder, GalvynError> {
         self.modules.init().await?;
         Ok(RouterBuilder {
             routes: GalvynRouter::new(),
+            setup: mem::take(&mut self.setup),
         })
     }
 }
 
 pub struct RouterBuilder {
     routes: GalvynRouter,
+    setup: GalvynSetup,
 }
 
 impl RouterBuilder {
@@ -122,7 +150,10 @@ impl RouterBuilder {
 
     /// Starts the webserver
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
-        let (router, routes) = mem::take(&mut self.routes).finish();
+        let (mut router, routes) = mem::take(&mut self.routes).finish();
+        if !self.setup.disable_sessions {
+            router = router.layer(session::layer());
+        }
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -135,7 +166,7 @@ impl RouterBuilder {
         let socket = TcpListener::bind(socket_addr).await?;
 
         info!("Starting to serve webserver on http://{socket_addr}");
-        let serve_future = axum::serve(socket, router.layer(session::layer()));
+        let serve_future = axum::serve(socket, router);
 
         #[cfg(feature = "graceful-shutdown")]
         let signal = {
