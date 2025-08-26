@@ -34,12 +34,15 @@ pub struct Galvyn {
 ///
 /// Most modules will provide their own setup options.
 #[derive(Default)]
-#[non_exhaustive]
+#[cfg_attr(doc, non_exhaustive)]
 pub struct GalvynSetup {
     /// Disables galvyn's session layer
     ///
     /// If you want to bring your own.
     pub disable_sessions: bool,
+
+    #[doc(hidden)]
+    pub _non_exhaustive: (),
 }
 
 impl Galvyn {
