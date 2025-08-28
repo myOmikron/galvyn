@@ -42,12 +42,13 @@ impl OauthErrorBuilder {
                         error.display = %error,
                         "Oauth client set invalid `redirect_uri`"
                     );
-                    OauthError {
+                    InnerOauthError {
                         redirect_uri: None,
                         state: None,
                         error: AuthErrorType::InvalidRequest,
                         description: Some("Invalid redirect url"),
                     }
+                    .wrap()
                 })?,
             state: request.state.clone(),
         })
@@ -55,12 +56,13 @@ impl OauthErrorBuilder {
 
     /// Constructs a new `OauthError`
     pub fn new_error(&self, error: AuthErrorType, description: &'static str) -> OauthError {
-        OauthError {
+        InnerOauthError {
             redirect_uri: self.redirect_uri.clone(),
             state: self.state.clone(),
             error,
             description: Some(description),
         }
+        .wrap()
     }
 
     /// Constructs a closure wrapping a `rorm::Error`
@@ -85,21 +87,32 @@ impl OauthErrorBuilder {
 pub type OauthResult<T> = Result<T, OauthError>;
 
 pub struct OauthError {
+    inner: Box<InnerOauthError>,
+}
+
+struct InnerOauthError {
     redirect_uri: Option<Url>,
     state: Option<String>,
 
     error: AuthErrorType,
     description: Option<&'static str>,
 }
+impl InnerOauthError {
+    fn wrap(self) -> OauthError {
+        OauthError {
+            inner: Box::new(self),
+        }
+    }
+}
 
 impl IntoResponse for OauthError {
     fn into_response(self) -> Response {
-        if let Some(mut redirect_uri) = self.redirect_uri {
+        if let Some(mut redirect_uri) = self.inner.redirect_uri {
             // Add query parameters to `redirect_uri`
             AuthError {
-                error: self.error,
-                state: self.state,
-                error_description: self.description,
+                error: self.inner.error,
+                state: self.inner.state,
+                error_description: self.inner.description,
             }
             .serialize(serde_urlencoded::Serializer::new(
                 &mut redirect_uri.query_pairs_mut(),
@@ -109,9 +122,9 @@ impl IntoResponse for OauthError {
             Redirect::temporary(redirect_uri.as_str()).into_response()
         } else {
             ApiJson(AuthError {
-                error: self.error,
-                state: self.state,
-                error_description: self.description,
+                error: self.inner.error,
+                state: self.inner.state,
+                error_description: self.inner.description,
             })
             .into_response()
         }

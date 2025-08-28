@@ -75,7 +75,7 @@ fn create_entries(ctx: &tera::Context, path: &Path, curr: &[DirEntry]) -> anyhow
     for entry in curr {
         match entry {
             DirEntry::Dir(dir) => {
-                create_dir(&path.join(dir.path())).with_context(|| {
+                create_dir(path.join(dir.path())).with_context(|| {
                     format!(
                         "Could not create directory {}",
                         path.join(dir.path()).display()
@@ -93,7 +93,7 @@ fn create_entries(ctx: &tera::Context, path: &Path, curr: &[DirEntry]) -> anyhow
                     .ok_or(anyhow!("Template was not utf8"))?;
 
                 let mut tera = Tera::default();
-                let rendered = tera.render_str(&content, ctx)?;
+                let rendered = tera.render_str(content, ctx)?;
 
                 new_file
                     .write_all(rendered.as_bytes())

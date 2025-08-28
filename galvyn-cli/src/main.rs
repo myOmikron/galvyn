@@ -1,7 +1,6 @@
 use std::process::exit;
 
 use clap::Parser;
-use owo_colors::OwoColorize;
 
 use crate::cli::Cli;
 use crate::cli::Command;

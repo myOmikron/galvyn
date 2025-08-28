@@ -14,6 +14,11 @@ pub trait ResponseBody: ShouldBeResponseBody {
     fn header() -> Vec<HeaderName> {
         vec![]
     }
+
+    #[allow(
+        clippy::type_complexity,
+        reason = "Type should be self-explanatory and indirection would add noise"
+    )]
     fn body(_generator: &mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
 }
 
