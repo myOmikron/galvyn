@@ -20,6 +20,7 @@ pub trait ResponseBody: ShouldBeResponseBody {
 pub trait ShouldBeResponseBody {}
 
 #[derive(Clone, Debug)]
+#[allow(clippy::type_complexity)]
 pub struct ResponseBodyMetadata {
     pub body: fn(&mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>,
 }

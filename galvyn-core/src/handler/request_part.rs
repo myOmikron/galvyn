@@ -18,6 +18,7 @@ pub trait RequestPart: ShouldBeRequestPart {
 pub trait ShouldBeRequestPart {}
 
 #[derive(Clone, Debug)]
+#[allow(clippy::type_complexity)]
 pub struct RequestPartMetadata {
     pub query_parameters: fn(&mut EndpointContext) -> Vec<(String, Option<Schema>)>,
     pub path_parameters: fn(&mut EndpointContext) -> Vec<(String, Option<Schema>)>,
