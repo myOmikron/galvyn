@@ -1,5 +1,6 @@
 use std::any::type_name;
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 use axum::Form;
 use axum::Json;
@@ -17,11 +18,13 @@ use bytes::Buf;
 use bytes::BytesMut;
 use bytes::buf::Chain;
 use mime::Mime;
+use regex::Regex;
 use schemars::JsonSchema;
+use schemars::schema::InstanceType;
 use schemars::schema::Schema;
+use schemars::schema::SingleOrVec;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use tracing::debug;
 use tracing::warn;
 
 use super::request_body::RequestBody;
@@ -106,19 +109,108 @@ impl RequestBody for RawForm {
     }
 }
 
+static PATH_PARAM_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{[^}]*}").unwrap());
 impl<T> ShouldBeRequestPart for Path<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
     fn path_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
-        let Some(obj) = ctx.generator.generate_object::<T>() else {
-            warn!("Unsupported handler argument: {}", type_name::<Self>());
-            debug!("generate_object::<{}>() == None", type_name::<T>());
+        let Schema::Object(schema) = ctx.generator.generate_refless::<T>() else {
+            warn!(type = type_name::<T>(), "Failed to generate schema, this should never happen!");
             return Vec::new();
         };
 
-        obj.properties
-            .into_iter()
-            .map(|(name, schema)| (name, Some(schema)))
-            .collect()
+        let mut unhandled_params: Vec<_> = PATH_PARAM_REGEX
+            .find_iter(ctx.path)
+            .map(|needle| &ctx.path[(needle.start() + 1)..(needle.end() - 1)])
+            .collect();
+        let mut handled_params = Vec::new();
+
+        match &schema.instance_type {
+            Some(SingleOrVec::Single(boxed)) if **boxed == InstanceType::Object => {
+                let object = schema.object.unwrap_or_else(|| {
+                    warn!("Unsupported handler argument: {}", type_name::<Self>());
+                    Default::default()
+                });
+
+                handled_params.extend(
+                    object
+                        .properties
+                        .into_iter()
+                        .map(|(name, schema)| (name, Some(schema))),
+                );
+
+                for (key, _) in &handled_params {
+                    unhandled_params.retain_mut(|path_key| path_key != key);
+                }
+            }
+            Some(SingleOrVec::Single(boxed)) if **boxed == InstanceType::Array => {
+                let array = schema.array.unwrap_or_else(|| {
+                    warn!("Unsupported handler argument: {}", type_name::<Self>());
+                    Default::default()
+                });
+                let items = array.items.unwrap_or_else(|| {
+                    warn!("Unsupported handler argument: {}", type_name::<Self>());
+                    SingleOrVec::Vec(Vec::new())
+                });
+
+                match items {
+                    SingleOrVec::Single(item) => {
+                        handled_params.extend(
+                            unhandled_params
+                                .drain(..)
+                                .map(|key| (key.to_string(), Some(item.as_ref().clone()))),
+                        );
+                    }
+                    SingleOrVec::Vec(items) => {
+                        if items.len() > unhandled_params.len() {
+                            warn!(
+                                schema = type_name::<Self>(),
+                                schema.len = items.len(),
+                                path = ctx.path,
+                                path.len = unhandled_params.len(),
+                                "Path parameters don't cover entire schema",
+                            );
+                        }
+                        handled_params.extend(
+                            unhandled_params
+                                .drain(..items.len())
+                                .zip(items)
+                                .map(|(key, schema)| (key.to_string(), Some(schema))),
+                        );
+                    }
+                }
+            }
+            Some(SingleOrVec::Single(_)) => {
+                if unhandled_params.is_empty() {
+                    warn!(
+                        schema = type_name::<Self>(),
+                        path = ctx.path,
+                        "Missing path parameter",
+                    );
+                } else {
+                    handled_params.push((
+                        unhandled_params.remove(0).to_string(),
+                        Some(Schema::Object(schema)),
+                    ));
+                }
+            }
+            _ => {
+                warn!("Unsupported handler argument: {}", type_name::<Self>());
+            }
+        }
+
+        if unhandled_params.is_empty() {
+            handled_params
+        } else {
+            warn!(
+                schema = type_name::<Self>(),
+                schema.len = handled_params.len(),
+                path = ctx.path,
+                path.len = handled_params.len() + unhandled_params.len(),
+                "Schema does not cover all path parameters",
+            );
+            handled_params.extend(unhandled_params.iter().map(|key| (key.to_string(), None)));
+            handled_params
+        }
     }
 }
 

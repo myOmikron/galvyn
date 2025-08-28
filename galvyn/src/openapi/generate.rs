@@ -23,7 +23,8 @@ use openapiv3::StatusCode;
 use tracing::debug;
 use tracing::warn;
 
-use crate::openapi::{OpenapiBuilder, OpenapiMetadata};
+use crate::openapi::OpenapiBuilder;
+use crate::openapi::OpenapiMetadata;
 use crate::Galvyn;
 
 pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
@@ -78,7 +79,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
         }
 
-        let mut ctx = EndpointContext::_new(&mut schemas, &route.handler.method);
+        let mut ctx = EndpointContext::_new(&mut schemas, &route.handler.method, &route.path);
         if let Some(response_body) = route.handler.response_body.as_ref() {
             for (status_code, body) in (response_body.body)(&mut ctx) {
                 // Insert status code

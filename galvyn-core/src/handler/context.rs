@@ -14,11 +14,22 @@ pub struct EndpointContext<'ctx> {
 
     /// HTTP method of the endpoint to generate schemas for
     pub method: &'ctx Method,
+
+    /// Url path of the endpoint to generate schemas for
+    pub path: &'ctx str,
 }
 
 impl<'ctx> EndpointContext<'ctx> {
     #[doc(hidden)]
-    pub fn _new(generator: &'ctx mut SchemaGenerator, method: &'ctx Method) -> Self {
-        Self { generator, method }
+    pub fn _new(
+        generator: &'ctx mut SchemaGenerator,
+        method: &'ctx Method,
+        path: &'ctx str,
+    ) -> Self {
+        Self {
+            generator,
+            method,
+            path,
+        }
     }
 }
