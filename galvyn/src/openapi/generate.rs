@@ -78,7 +78,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
         }
 
-        let mut ctx = EndpointContext::_new(&mut schemas);
+        let mut ctx = EndpointContext::_new(&mut schemas, &route.handler.method);
         if let Some(response_body) = route.handler.response_body.as_ref() {
             for (status_code, body) in (response_body.body)(&mut ctx) {
                 // Insert status code

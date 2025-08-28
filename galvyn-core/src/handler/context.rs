@@ -11,11 +11,14 @@ use crate::schema_generator::SchemaGenerator;
 pub struct EndpointContext<'ctx> {
     /// State for generating schemas from types implementing [`JsonSchema`]
     pub generator: &'ctx mut SchemaGenerator,
+
+    /// HTTP method of the endpoint to generate schemas for
+    pub method: &'ctx Method,
 }
 
 impl<'ctx> EndpointContext<'ctx> {
     #[doc(hidden)]
-    pub fn _new(generator: &'ctx mut SchemaGenerator) -> Self {
-        Self { generator }
+    pub fn _new(generator: &'ctx mut SchemaGenerator, method: &'ctx Method) -> Self {
+        Self { generator, method }
     }
 }

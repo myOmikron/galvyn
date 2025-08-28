@@ -8,6 +8,7 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::RawForm;
 use axum::http::HeaderName;
+use axum::http::Method;
 use axum::http::StatusCode;
 use axum::http::header;
 use axum::response::Html;
@@ -55,25 +56,56 @@ impl<T: DeserializeOwned + JsonSchema> RequestBody for Json<T> {
 impl<T> ShouldBeRequestBody for Form<T> {}
 
 impl<T: DeserializeOwned + JsonSchema> RequestBody for Form<T> {
+    fn query_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
+        if ctx.method == Method::GET {
+            let Some(obj) = ctx.generator.generate_object::<T>() else {
+                warn!("Unsupported handler argument: {}", type_name::<Self>());
+                return Vec::new();
+            };
+
+            obj.properties
+                .into_iter()
+                .map(|(name, schema)| (name, Some(schema)))
+                .collect()
+        } else {
+            vec![]
+        }
+    }
+
     fn body(ctx: &mut EndpointContext) -> (Mime, Option<Schema>) {
-        (
-            mime::APPLICATION_WWW_FORM_URLENCODED,
-            Some(ctx.generator.generate::<T>()),
-        )
+        if ctx.method == Method::GET {
+            RawForm::body(ctx)
+        } else {
+            (
+                mime::APPLICATION_WWW_FORM_URLENCODED,
+                Some(ctx.generator.generate::<T>()),
+            )
+        }
     }
 }
 
 impl ShouldBeRequestBody for RawForm {}
-/*
-impl HandlerArgument for RawForm {
-    fn request_body(_ctx: &mut HandlerContext) -> Option<RequestBody> {
-        Some(simple_request_body(SimpleRequestBody {
-            mime_type: mime::APPLICATION_WWW_FORM_URLENCODED,
-            schema: None,
-        }))
+impl RequestBody for RawForm {
+    fn body(ctx: &mut EndpointContext) -> (Mime, Option<Schema>) {
+        if ctx.method == Method::GET {
+            // This is a dirty hack.
+            //
+            // The "correct" implementation would be returning `None`.
+            // However, a type implementing `RequestBody` should actually process the body.
+            // The only exceptions I know of are `Form` and `RawForm` and I don't want to
+            // add complexity for every other type just to support them.
+            (
+                "application/x-empty"
+                    .parse()
+                    .expect("This should be a valid mime type"),
+                None,
+            )
+        } else {
+            (mime::APPLICATION_WWW_FORM_URLENCODED, None)
+        }
     }
 }
-*/
+
 impl<T> ShouldBeRequestPart for Path<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
     fn path_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
