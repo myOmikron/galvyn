@@ -107,7 +107,11 @@ pub fn handler(
         };
     }
 
-    let args_todo = sig.inputs.iter().map(|_| quote! {todo!()});
+    let args_todo = sig
+        .inputs
+        .iter()
+        .map(|_| quote! {todo!()})
+        .collect::<Vec<_>>();
 
     let func_ident = &sig.ident;
     let module_ident = format_ident!("__{func_ident}_module");
@@ -296,12 +300,20 @@ pub fn handler(
             fn method_router(&self) -> #core_crate::re_exports::axum::routing::MethodRouter {
                 #tokens
 
-                fn test_send<T: Send>(_f: impl FnOnce() -> T) {}
-                #[allow(unreachable_code)]
-                test_send(|| #func_ident #turbo_fish(#(#args_todo),*));
-                #(
-                    test_send::<#request_types>(|| panic!());
-                )*
+                #[allow(unreachable_code, clippy::diverging_sub_expression)]
+                let _ = async {
+                    // Future must implement Sent
+                    #core_crate::macro_utils::test_trait::send(#func_ident #turbo_fish(#(#args_todo),*));
+
+                    // Arguments must implement Sent
+                    #(
+                        #core_crate::macro_utils::test_trait::send::<#request_types>(panic!());
+                    )*
+
+                    // Return must implement IntoResponse
+                    #core_crate::macro_utils::test_trait::into_response(#func_ident #turbo_fish(#(#args_todo),*).await);
+                };
+
 
                 #core_crate::re_exports::axum::routing::MethodRouter::new()
                     .on(#core_crate::re_exports::axum::routing::MethodFilter::#method, #func_ident #turbo_fish)
