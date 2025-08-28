@@ -14,9 +14,9 @@ use thiserror::Error;
 use tracing::debug;
 use tracing::error;
 
+use crate::handler::context::EndpointContext;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
-use crate::schema_generator::SchemaGenerator;
 use crate::stuff::api_json::ApiJson;
 use crate::stuff::schema::ApiErrorResponse;
 use crate::stuff::schema::ApiStatusCode;
@@ -171,10 +171,8 @@ impl IntoResponse for ApiError {
 
 impl ShouldBeResponseBody for ApiError {}
 impl ResponseBody for ApiError {
-    fn body(
-        generator: &mut SchemaGenerator,
-    ) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
-        let schema = generator.generate::<ApiErrorResponse>();
+    fn body(ctx: &mut EndpointContext) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
+        let schema = ctx.generator.generate::<ApiErrorResponse>();
         vec![
             (
                 StatusCode::BAD_REQUEST,

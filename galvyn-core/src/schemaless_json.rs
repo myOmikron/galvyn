@@ -43,24 +43,22 @@ mod galvyn_impls {
     use schemars::schema::Schema;
 
     use crate::SchemalessJson;
+    use crate::handler::context::EndpointContext;
     use crate::handler::request_body::RequestBody;
     use crate::handler::request_body::ShouldBeRequestBody;
     use crate::handler::response_body::ResponseBody;
     use crate::handler::response_body::ShouldBeResponseBody;
-    use crate::schema_generator::SchemaGenerator;
 
     impl<T> ShouldBeRequestBody for SchemalessJson<T> {}
     impl<T> RequestBody for SchemalessJson<T> {
-        fn body(_generator: &mut SchemaGenerator) -> (Mime, Option<Schema>) {
+        fn body(_ctx: &mut EndpointContext) -> (Mime, Option<Schema>) {
             (mime::APPLICATION_JSON, None)
         }
     }
 
     impl<T> ShouldBeResponseBody for SchemalessJson<T> {}
     impl<T> ResponseBody for SchemalessJson<T> {
-        fn body(
-            _generator: &mut SchemaGenerator,
-        ) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+        fn body(_ctx: &mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
             vec![(StatusCode::OK, Some((mime::APPLICATION_JSON, None)))]
         }
     }

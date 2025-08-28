@@ -3,25 +3,25 @@ use axum::http::StatusCode;
 use mime::Mime;
 use schemars::schema::Schema;
 
+use crate::handler::context::EndpointContext;
 use crate::handler::response_part::ResponsePart;
 use crate::handler::response_part::ShouldBeResponsePart;
 use crate::macro_utils::type_metadata::HasMetadata;
 use crate::macro_utils::type_metadata::ShouldHaveMetadata;
-use crate::schema_generator::SchemaGenerator;
 
 /// Describes the behaviour of a type implementing [`IntoResponse`](axum::response::IntoResponse)
 pub trait ResponseBody: ShouldBeResponseBody {
     fn header() -> Vec<HeaderName> {
         vec![]
     }
-    fn body(_generator: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
+    fn body(_generator: &mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>;
 }
 
 pub trait ShouldBeResponseBody {}
 
 #[derive(Clone, Debug)]
 pub struct ResponseBodyMetadata {
-    pub body: fn(&mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>,
+    pub body: fn(&mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>,
 }
 
 impl<T: ShouldBeResponseBody> ShouldHaveMetadata<ResponseBodyMetadata> for T {}

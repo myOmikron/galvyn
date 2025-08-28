@@ -1,6 +1,7 @@
 use std::mem;
 
 use axum::http::Method;
+use galvyn_core::handler::context::EndpointContext;
 use galvyn_core::re_exports::schemars;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::schema_generator::SchemaGenerator;
@@ -77,8 +78,9 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
         }
 
+        let mut ctx = EndpointContext::_new(&mut schemas);
         if let Some(response_body) = route.handler.response_body.as_ref() {
-            for (status_code, body) in (response_body.body)(&mut schemas) {
+            for (status_code, body) in (response_body.body)(&mut ctx) {
                 // Insert status code
                 let ReferenceOr::Item(response) = operation
                     .responses
@@ -148,7 +150,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             }
         }
         if let Some(request_body) = route.handler.request_body.as_ref() {
-            let (mime, schema) = (request_body.body)(&mut schemas);
+            let (mime, schema) = (request_body.body)(&mut ctx);
             operation.request_body = Some(ReferenceOr::Item(RequestBody {
                 content: FromIterator::from_iter([(
                     mime.to_string(),
@@ -180,7 +182,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             }));
         }
         for part in &route.handler.request_parts {
-            for (name, schema) in (part.path_parameters)(&mut schemas) {
+            for (name, schema) in (part.path_parameters)(&mut ctx) {
                 operation
                     .parameters
                     .push(ReferenceOr::Item(Parameter::Path {
@@ -191,7 +193,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
                         style: Default::default(),
                     }));
             }
-            for (name, schema) in (part.query_parameters)(&mut schemas) {
+            for (name, schema) in (part.query_parameters)(&mut ctx) {
                 operation
                     .parameters
                     .push(ReferenceOr::Item(Parameter::Query {

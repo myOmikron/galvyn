@@ -1,5 +1,6 @@
 use std::panic::Location;
 
+use galvyn_core::handler::context::EndpointContext;
 use galvyn_core::handler::response_body::ResponseBody;
 use galvyn_core::handler::response_body::ShouldBeResponseBody;
 use galvyn_core::re_exports::axum::http::StatusCode;
@@ -7,7 +8,6 @@ use galvyn_core::re_exports::axum::response::IntoResponse;
 use galvyn_core::re_exports::axum::response::Redirect;
 use galvyn_core::re_exports::axum::response::Response;
 use galvyn_core::re_exports::mime::Mime;
-use galvyn_core::schema_generator::SchemaGenerator;
 use galvyn_core::stuff::api_error::ApiError;
 use galvyn_core::stuff::api_json::ApiJson;
 use galvyn_core::stuff::schema::ApiStatusCode;
@@ -119,7 +119,7 @@ impl IntoResponse for OauthError {
 }
 impl ShouldBeResponseBody for OauthError {}
 impl ResponseBody for OauthError {
-    fn body(generator: &mut SchemaGenerator) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
+    fn body(generator: &mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)> {
         let mut body = ApiJson::<AuthError>::body(generator);
         body.insert(0, (StatusCode::TEMPORARY_REDIRECT, None));
         body

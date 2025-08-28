@@ -12,11 +12,11 @@ use schemars::schema::Schema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use crate::handler::context::EndpointContext;
 use crate::handler::request_body::RequestBody;
 use crate::handler::request_body::ShouldBeRequestBody;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
-use crate::schema_generator::SchemaGenerator;
 use crate::stuff::api_error::ApiError;
 
 /// Alternative for [`Json`] which produces our [`ApiError`] in case of failure
@@ -70,7 +70,7 @@ where
     Json<T>: ResponseBody,
 {
     fn body(
-        generator: &mut SchemaGenerator,
+        generator: &mut EndpointContext,
     ) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
         Json::<T>::body(generator)
     }
@@ -81,7 +81,7 @@ impl<T> RequestBody for ApiJson<T>
 where
     Json<T>: RequestBody,
 {
-    fn body(generator: &mut SchemaGenerator) -> (mime::Mime, Option<Schema>) {
+    fn body(generator: &mut EndpointContext) -> (mime::Mime, Option<Schema>) {
         Json::<T>::body(generator)
     }
 }

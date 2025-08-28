@@ -11,6 +11,7 @@ use self::response_part::ResponsePartMetadata;
 use crate::macro_utils::type_metadata::HasMetadata;
 use crate::macro_utils::type_metadata::ShouldHaveMetadata;
 
+pub mod context;
 mod impls;
 pub mod request_body;
 pub mod request_part;
