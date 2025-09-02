@@ -19,7 +19,7 @@ use tower_sessions::cookie::SameSite;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::cookie::time::OffsetDateTime;
 pub use tower_sessions::session::Error;
-use tower_sessions::session::Id;
+pub use tower_sessions::session::Id;
 use tower_sessions::session::Record;
 use tower_sessions::session_store::Error as StoreError;
 use tracing::debug;
