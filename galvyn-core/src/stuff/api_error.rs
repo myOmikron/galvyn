@@ -195,6 +195,8 @@ impl IntoResponse for ApiError {
                     ApiStatusCode::InternalServerError => "Internal server error",
                 }
                 .to_string(),
+                #[cfg(feature = "opentelemetry")]
+                trace_id: self.trace_id.to_string(),
             }),
         );
 

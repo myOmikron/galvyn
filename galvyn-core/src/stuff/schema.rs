@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 
+use opentelemetry::trace::TraceId;
 use schemars::JsonSchema;
 use schemars::JsonSchema_repr;
 use schemars::r#gen::SchemaGenerator;
@@ -40,10 +41,15 @@ pub struct ApiErrorResponse {
     ///
     /// Important: Does not match http status codes
     pub status_code: ApiStatusCode,
+
     /// A human-readable error message.
     ///
     /// May be used for displaying purposes
     pub message: String,
+
+    /// ID of the opentelemetry trace this error originated in
+    #[cfg(feature = "opentelemetry")]
+    pub trace_id: String,
 }
 
 /// A type without any runtime value
