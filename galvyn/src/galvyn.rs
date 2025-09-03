@@ -55,12 +55,7 @@ pub struct GalvynSetup {
 
 impl Galvyn {
     /// Constructs the builder to initialize and start `Galvyn`
-    pub fn new() -> ModuleBuilder {
-        Self::with_setup(Default::default())
-    }
-
-    /// Constructs the builder to initialize and start `Galvyn`
-    pub fn with_setup(setup: GalvynSetup) -> ModuleBuilder {
+    pub fn builder(setup: GalvynSetup) -> ModuleBuilder {
         ModuleBuilder::new(setup)
     }
 

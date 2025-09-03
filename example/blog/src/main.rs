@@ -31,7 +31,7 @@ async fn shutdown() {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Galvyn::new()
+    Galvyn::builder(Default::default())
         .register_module::<Database>(Default::default())
         .register_module::<AuthModule>(Default::default())
         .init_modules()
