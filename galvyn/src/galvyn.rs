@@ -20,6 +20,7 @@ use tracing_subscriber::EnvFilter;
 
 use crate::core::Module;
 use crate::error::GalvynError;
+use crate::panic_hook::set_panic_hook;
 
 /// Global handle to the running galvyn server
 ///
@@ -40,6 +41,13 @@ pub struct GalvynSetup {
     ///
     /// If you want to bring your own.
     pub disable_sessions: bool,
+
+    /// Disables galvyn's [panic hook](crate::panic_hook).
+    ///
+    /// Galvyn's panic hook applies globally (including non-galvyn code)
+    /// and emits `error!` events instead of printing to stderr when a panic is raised.
+    /// (Whether the panic is caught or not does not matter.)
+    pub disable_panic_hook: bool,
 
     #[doc(hidden)]
     pub _non_exhaustive: (),
@@ -99,8 +107,9 @@ pub struct ModuleBuilder {
 
 impl ModuleBuilder {
     fn new(setup: GalvynSetup) -> ModuleBuilder {
-        #[cfg(feature = "panic-hook")]
-        crate::panic_hook::set_panic_hook();
+        if !setup.disable_panic_hook {
+            set_panic_hook();
+        }
 
         let registry = tracing_subscriber::registry()
             .with(EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(Level::INFO.as_str())))

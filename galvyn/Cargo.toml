@@ -54,7 +54,6 @@ default = [
     "openapi",
     "opentelemetry",
     "graceful-shutdown",
-    "panic-hook",
     "schemars/url",
 ]
 contrib = [
@@ -71,9 +70,6 @@ opentelemetry = [
 
 # Enables a graceful shutdown upon receiving a termination signal
 graceful-shutdown = ["dep:signal-hook", "dep:signal-hook-tokio"]
-
-# Sets the global panic hook to output tracing events instead of writing to stdout
-panic-hook = []
 
 # ------------- #
 # Rorm features #

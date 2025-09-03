@@ -2,7 +2,6 @@
 
 use std::borrow::Cow;
 
-use opentelemetry::trace::TraceId;
 use schemars::JsonSchema;
 use schemars::JsonSchema_repr;
 use schemars::r#gen::SchemaGenerator;
