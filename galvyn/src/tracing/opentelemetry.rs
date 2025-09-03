@@ -1,20 +1,34 @@
-use crate::core::re_exports::opentelemetry_otlp;
-use crate::core::re_exports::tracing_opentelemetry;
+use std::ops::ControlFlow;
+
 use axum::extract::Request;
-use axum::http::{HeaderMap, HeaderName, HeaderValue};
+use axum::http::HeaderMap;
+use axum::http::HeaderName;
+use axum::http::HeaderValue;
 use axum::response::Response;
 use galvyn_core::middleware::SimpleGalvynMiddleware;
-use galvyn_core::re_exports::opentelemetry::propagation::{Extractor, Injector, TextMapPropagator};
-use galvyn_core::re_exports::opentelemetry::trace::{TraceError, TracerProvider};
-use galvyn_core::re_exports::opentelemetry::{Context, Key, KeyValue, Value};
+use galvyn_core::re_exports::opentelemetry::propagation::Extractor;
+use galvyn_core::re_exports::opentelemetry::propagation::Injector;
+use galvyn_core::re_exports::opentelemetry::propagation::TextMapPropagator;
+use galvyn_core::re_exports::opentelemetry::trace::TraceError;
+use galvyn_core::re_exports::opentelemetry::trace::TracerProvider;
+use galvyn_core::re_exports::opentelemetry::Context;
+use galvyn_core::re_exports::opentelemetry::Key;
+use galvyn_core::re_exports::opentelemetry::KeyValue;
+use galvyn_core::re_exports::opentelemetry::Value;
 use galvyn_core::re_exports::opentelemetry_otlp::WithExportConfig;
 use galvyn_core::re_exports::opentelemetry_sdk::propagation::TraceContextPropagator;
-use galvyn_core::re_exports::opentelemetry_sdk::{runtime, trace, Resource};
+use galvyn_core::re_exports::opentelemetry_sdk::runtime;
+use galvyn_core::re_exports::opentelemetry_sdk::trace;
+use galvyn_core::re_exports::opentelemetry_sdk::Resource;
 use galvyn_core::re_exports::tracing_opentelemetry::OpenTelemetrySpanExt;
-use std::ops::ControlFlow;
-use tracing::{warn, Span, Subscriber};
+use tracing::warn;
+use tracing::Span;
+use tracing::Subscriber;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
+
+use crate::core::re_exports::opentelemetry_otlp;
+use crate::core::re_exports::tracing_opentelemetry;
 
 pub struct OpenTelemetrySetup {
     pub service_name: String,

@@ -1,7 +1,8 @@
 //! Openapi related [`RouteMetadata`]
 
-use galvyn_core::router::RouteMetadata;
 use std::any::TypeId;
+
+use galvyn_core::router::RouteMetadata;
 
 /// Openapi related [`RouteMetadata`]
 #[derive(Debug, Clone, Default)]

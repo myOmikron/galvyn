@@ -6,19 +6,18 @@ pub use crate::module::*;
 pub mod re_exports {
     pub use axum;
     pub use mime;
-    pub use rorm;
-    pub use schemars;
-    pub use time;
-    pub use uuid;
-
     #[cfg(feature = "opentelemetry")]
     pub use opentelemetry;
     #[cfg(feature = "opentelemetry")]
     pub use opentelemetry_otlp;
     #[cfg(feature = "opentelemetry")]
     pub use opentelemetry_sdk;
+    pub use rorm;
+    pub use schemars;
+    pub use time;
     #[cfg(feature = "opentelemetry")]
     pub use tracing_opentelemetry;
+    pub use uuid;
 }
 
 pub mod handler;

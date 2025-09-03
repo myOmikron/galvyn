@@ -1,6 +1,7 @@
 //! Auto-generates an openapi document for your application
 
-use std::any::{Any, TypeId};
+use std::any::Any;
+use std::any::TypeId;
 use std::sync::OnceLock;
 
 pub use openapiv3::OpenAPI;

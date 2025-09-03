@@ -1,14 +1,21 @@
+use std::fmt;
+use std::fmt::Debug;
+use std::io;
+use std::mem;
+use std::time::Duration;
+
 use galvyn_core::re_exports::time::format_description::well_known::Rfc3339;
 use galvyn_core::re_exports::time::OffsetDateTime;
-
 use reqwest::Url;
-use std::fmt::Debug;
-use std::time::Duration;
-use std::{fmt, io, mem};
 use tracing::field::Field;
-use tracing::{warn, Event, Subscriber};
+use tracing::warn;
+use tracing::Event;
+use tracing::Subscriber;
 use tracing_subscriber::fmt::format::Writer;
-use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields, MakeWriter};
+use tracing_subscriber::fmt::FmtContext;
+use tracing_subscriber::fmt::FormatEvent;
+use tracing_subscriber::fmt::FormatFields;
+use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::registry::LookupSpan;
 
 #[cfg(feature = "opentelemetry")]
@@ -110,7 +117,8 @@ where
         let current_span = ctx.event_scope().and_then(|mut scope| scope.next());
         #[cfg(feature = "opentelemetry")]
         {
-            use galvyn_core::re_exports::opentelemetry::trace::{SpanContext, TraceContextExt};
+            use galvyn_core::re_exports::opentelemetry::trace::SpanContext;
+            use galvyn_core::re_exports::opentelemetry::trace::TraceContextExt;
             use galvyn_core::re_exports::tracing_opentelemetry::OtelData;
             let otel_context = current_span
                 .as_ref()
