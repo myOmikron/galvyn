@@ -27,6 +27,7 @@ pub trait ShouldBeResponseBody {}
 #[derive(Clone, Debug)]
 #[allow(clippy::type_complexity)]
 pub struct ResponseBodyMetadata {
+    #[allow(clippy::type_complexity, reason = "It's the trait method's signature")]
     pub body: fn(&mut EndpointContext) -> Vec<(StatusCode, Option<(Mime, Option<Schema>)>)>,
 }
 

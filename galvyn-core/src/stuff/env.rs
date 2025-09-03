@@ -259,6 +259,7 @@ impl<'de> Deserializer<'de> for StringDeserializer {
         V: Visitor<'de>,
     {
         let mut chars = self.0.chars();
+        #[expect(clippy::collapsible_if, reason = "Only allowed on newer rust versions")]
         if let Some(ch) = chars.next() {
             if chars.next().is_none() {
                 return visitor.visit_char(ch);

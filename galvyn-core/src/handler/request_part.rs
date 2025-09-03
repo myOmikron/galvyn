@@ -20,7 +20,10 @@ pub trait ShouldBeRequestPart {}
 #[derive(Clone, Debug)]
 #[allow(clippy::type_complexity)]
 pub struct RequestPartMetadata {
+    #[allow(clippy::type_complexity, reason = "It's the trait method's signature")]
     pub query_parameters: fn(&mut EndpointContext) -> Vec<(String, Option<Schema>)>,
+
+    #[allow(clippy::type_complexity, reason = "It's the trait method's signature")]
     pub path_parameters: fn(&mut EndpointContext) -> Vec<(String, Option<Schema>)>,
 }
 

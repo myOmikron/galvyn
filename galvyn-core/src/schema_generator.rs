@@ -98,6 +98,7 @@ impl SchemaGenerator {
 struct ReplaceNullType;
 impl Visitor for ReplaceNullType {
     fn visit_schema_object(&mut self, schema: &mut SchemaObject) {
+        #[expect(clippy::collapsible_if, reason = "Only allowed on newer rust versions")]
         if let Some(SingleOrVec::Single(boxed)) = &schema.instance_type {
             if **boxed == InstanceType::Null {
                 schema.instance_type = None;
