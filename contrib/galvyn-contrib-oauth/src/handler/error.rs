@@ -72,13 +72,10 @@ impl OauthErrorBuilder {
     pub fn map_rorm_error(&self) -> impl Fn(rorm::Error) -> OauthError {
         let location = Location::caller();
         |error: rorm::Error| {
-            ApiError {
-                code: ApiStatusCode::InternalServerError,
-                context: None,
-                location,
-                source: Some(error.into()),
-            }
-            .emit_tracing_event();
+            ApiError::new(ApiStatusCode::InternalServerError, "Db operation failed")
+                .with_manual_location(location)
+                .with_source(error)
+                .emit_tracing_event();
             self.new_error(AuthErrorType::ServerError, "Internal server error")
         }
     }

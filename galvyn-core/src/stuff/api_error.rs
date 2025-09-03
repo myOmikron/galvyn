@@ -8,6 +8,8 @@ use std::panic::Location;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::response::Response;
+#[cfg(feature = "opentelemetry")]
+use opentelemetry::trace::TraceId;
 use rorm::crud::update::UpdateBuilder;
 use schemars::schema::Schema;
 use thiserror::Error;
@@ -29,12 +31,19 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub struct ApiError {
     /// Rough indication of the error reason (exposed to frontend)
     pub code: ApiStatusCode,
+
     /// An arbitrary string literal describing the error
     pub context: Option<&'static str>,
+
     /// Location where the error originated from
     pub location: &'static Location<'static>,
+
     /// The error's underlying source
     pub source: Option<Box<dyn Error + Send + Sync + 'static>>,
+
+    /// ID of the opentelemetry trace this error originated in
+    #[cfg(feature = "opentelemetry")]
+    pub trace_id: TraceId,
 }
 
 impl fmt::Display for ApiError {
@@ -65,6 +74,8 @@ impl ApiError {
             context: Some(context),
             location: Location::caller(),
             source: None,
+            #[cfg(feature = "opentelemetry")]
+            trace_id: Self::get_trace_id(),
         }
     }
 
@@ -108,6 +119,8 @@ impl ApiError {
             context,
             location,
             source,
+            #[cfg(feature = "opentelemetry")]
+                trace_id: _, // The log message will hopefully be emitted in the same span
         } = &self;
 
         match code {
@@ -139,6 +152,26 @@ impl ApiError {
                 );
             }
         }
+    }
+
+    /// Adds a location to the `ApiError`
+    ///
+    /// Normally the location added automatically is enough.
+    pub fn with_manual_location(mut self, location: &'static Location<'static>) -> Self {
+        self.location = location;
+        self
+    }
+
+    /// Retrieves the current span's trace id
+    ///
+    /// This little helper can be used to construct an `ApiError` with a literal.
+    #[cfg(feature = "opentelemetry")]
+    pub fn get_trace_id() -> TraceId {
+        use opentelemetry::trace::TraceContextExt;
+        use tracing::Span;
+        use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+        Span::current().context().span().span_context().trace_id()
     }
 }
 
@@ -207,6 +240,8 @@ macro_rules! impl_into_internal_server_error {
                     context: None,
                     location: Location::caller(),
                     source: Some(value.into()),
+                    #[cfg(feature = "opentelemetry")]
+                    trace_id: Self::get_trace_id(),
                 }
             }
         }
