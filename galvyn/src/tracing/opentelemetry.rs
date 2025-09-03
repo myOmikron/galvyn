@@ -1,24 +1,20 @@
+use crate::core::re_exports::opentelemetry_otlp;
+use crate::core::re_exports::tracing_opentelemetry;
 use axum::extract::Request;
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
 use axum::response::Response;
 use galvyn_core::middleware::SimpleGalvynMiddleware;
-use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator};
-use opentelemetry::trace::{TraceError, TracerProvider};
-use opentelemetry::{Context, Key, KeyValue, Value};
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::propagation::TraceContextPropagator;
-use opentelemetry_sdk::{runtime, trace, Resource};
+use galvyn_core::re_exports::opentelemetry::propagation::{Extractor, Injector, TextMapPropagator};
+use galvyn_core::re_exports::opentelemetry::trace::{TraceError, TracerProvider};
+use galvyn_core::re_exports::opentelemetry::{Context, Key, KeyValue, Value};
+use galvyn_core::re_exports::opentelemetry_otlp::WithExportConfig;
+use galvyn_core::re_exports::opentelemetry_sdk::propagation::TraceContextPropagator;
+use galvyn_core::re_exports::opentelemetry_sdk::{runtime, trace, Resource};
+use galvyn_core::re_exports::tracing_opentelemetry::OpenTelemetrySpanExt;
 use std::ops::ControlFlow;
 use tracing::{warn, Span, Subscriber};
-use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
-
-pub mod re_exports {
-    pub use opentelemetry;
-    pub use opentelemetry_sdk;
-    pub use tracing_opentelemetry;
-}
 
 pub struct OpenTelemetrySetup {
     pub service_name: String,

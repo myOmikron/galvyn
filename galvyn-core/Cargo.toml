@@ -6,6 +6,18 @@ authors = ["Niklas Pfister <git@omikron.dev>"]
 license = "MPL-2.0"
 description = "Core concepts for galvyn like trait definitions"
 
+[features]
+default = [
+    "opentelemetry"
+]
+
+opentelemetry = [
+    "dep:tracing-opentelemetry",
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+]
+
 [dependencies]
 # Webserver
 axum = { workspace = true, default-features = false, features = ["query", "form", "json"] }
@@ -17,12 +29,12 @@ serde_repr = { version = "~0.1" }
 schemars = { workspace = true, features = ["uuid1"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }
-tracing = { version = "~0.1" }
 thiserror = "~2"
 anyhow = { version = "~1" }
 rorm = { workspace = true, features = ["time"] }
 uuid = { version = "~1", features = ["v4", "serde"] }
 time = { version = "~0.3" }
+
 
 # TODO: maybe roll our own?
 tower-sessions = { version = "~0.14" }
@@ -32,6 +44,22 @@ base64 = { version = "~0.22" }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
+
+
+# ------- #
+# Tracing #
+# ------- #
+
+# Core
+tracing = { version = "~0.1" }
+
+# Opentelemetry Bridge
+tracing-opentelemetry = { workspace = true, optional = true }
+
+# Open telemetry
+opentelemetry = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio"], optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
 
 # ----- #
 # Async #

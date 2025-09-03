@@ -1,19 +1,18 @@
 use galvyn_core::re_exports::time::format_description::well_known::Rfc3339;
 use galvyn_core::re_exports::time::OffsetDateTime;
 
-use opentelemetry::trace::{SpanContext, TraceContextExt};
 use reqwest::Url;
 use std::fmt::Debug;
 use std::time::Duration;
 use std::{fmt, io, mem};
 use tracing::field::Field;
 use tracing::{warn, Event, Subscriber};
-use tracing_opentelemetry::OtelData;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields, MakeWriter};
 use tracing_subscriber::registry::LookupSpan;
 
-pub mod otel;
+#[cfg(feature = "opentelemetry")]
+pub mod opentelemetry;
 
 /// [`Format`](tracing_subscriber::fmt::format::Format) for `tracing_subscriber::fmt` layer.
 ///
@@ -109,16 +108,21 @@ where
         }
 
         let current_span = ctx.event_scope().and_then(|mut scope| scope.next());
-        let otel_context = current_span
-            .as_ref()
-            .and_then(|span| {
-                span.extensions()
-                    .get::<OtelData>()
-                    .map(|data| data.parent_cx.span().span_context().clone())
-            })
-            .unwrap_or(SpanContext::NONE);
-        json.insert("trace_id", otel_context.trace_id().to_string());
-        json.insert("span_id", otel_context.span_id().to_string());
+        #[cfg(feature = "opentelemetry")]
+        {
+            use galvyn_core::re_exports::opentelemetry::trace::{SpanContext, TraceContextExt};
+            use galvyn_core::re_exports::tracing_opentelemetry::OtelData;
+            let otel_context = current_span
+                .as_ref()
+                .and_then(|span| {
+                    span.extensions()
+                        .get::<OtelData>()
+                        .map(|data| data.parent_cx.span().span_context().clone())
+                })
+                .unwrap_or(SpanContext::NONE);
+            json.insert("trace_id", otel_context.trace_id().to_string());
+            json.insert("span_id", otel_context.span_id().to_string());
+        }
         json.insert("service_name", self.service_name.clone());
         if let Some(current_span) = current_span {
             json.insert("span_name", current_span.metadata().name().to_string());

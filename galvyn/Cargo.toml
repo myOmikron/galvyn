@@ -35,10 +35,6 @@ tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
 # TODO: make optional
 tracing-forest = { version = "~0.2", features = ["ansi", "tokio", "smallvec", "chrono"] }
-tracing-opentelemetry = { version = "0.25" }
-opentelemetry = { version = "0.24" }
-opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.17" }
 reqwest = { version = "~0.12" }
 
 galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
@@ -56,6 +52,7 @@ schemars = { workspace = true, optional = true }
 default = [
     "rorm-default",
     "openapi",
+    "opentelemetry",
     "graceful-shutdown",
     "panic-hook",
     "schemars/url",
@@ -67,6 +64,9 @@ contrib = [
 openapi = [
     "dep:openapiv3",
     "serde_json"
+]
+opentelemetry = [
+    "galvyn-core/opentelemetry"
 ]
 
 # Enables a graceful shutdown upon receiving a termination signal
