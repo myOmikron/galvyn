@@ -15,6 +15,7 @@ use opentelemetry::trace::TraceId;
 use rorm::crud::update::UpdateBuilder;
 use schemars::JsonSchema;
 use schemars::schema::Schema;
+use serde::Serialize;
 use thiserror::Error;
 use tracing::debug;
 use tracing::error;
@@ -111,7 +112,7 @@ impl fmt::Display for InnerApiError {
     }
 }
 
-impl ApiError {
+impl<T> ApiError<T> {
     /// Constructs a new `ApiError`
     #[track_caller]
     pub fn new(code: ApiStatusCode, context: &'static str) -> Self {
@@ -238,7 +239,7 @@ impl ApiError {
     }
 }
 
-impl IntoResponse for ApiError {
+impl<T: Serialize> IntoResponse for ApiError<T> {
     fn into_response(self) -> Response {
         self.emit_tracing_event();
 
@@ -276,15 +277,15 @@ impl IntoResponse for ApiError {
     }
 }
 
-impl<E> ShouldBeResponseBody for ApiError<E> {}
-impl<E: JsonSchema> ResponseBody for ApiError<E> {
+impl<T> ShouldBeResponseBody for ApiError<T> {}
+impl<T: JsonSchema> ResponseBody for ApiError<T> {
     fn body(ctx: &mut EndpointContext) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
         vec![
             (
                 StatusCode::BAD_REQUEST,
                 Some((
                     mime::APPLICATION_JSON,
-                    Some(ctx.generator.generate::<ApiErrorResponse<E>>()),
+                    Some(ctx.generator.generate::<ApiErrorResponse<T>>()),
                 )),
             ),
             (
@@ -298,7 +299,9 @@ impl<E: JsonSchema> ResponseBody for ApiError<E> {
     }
 }
 
-impl<'rf, E, M> From<UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>> for ApiError {
+impl<'rf, E, M, T> From<UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>>
+    for ApiError<T>
+{
     #[track_caller]
     fn from(_value: UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>) -> Self {
         Self::bad_request("Nothing to update")
@@ -311,7 +314,7 @@ impl<'rf, E, M> From<UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty
 /// which are supposed to be convertable into an [`InnerApiError::server_error`] simplicity.
 macro_rules! impl_into_internal_server_error {
     ($($error:ty,)*) => {$(
-        impl From<$error> for ApiError {
+        impl<T> From<$error> for ApiError<T> {
             #[track_caller]
             fn from(value: $error) -> Self {
                 ApiError::ApiError(InnerApiError {

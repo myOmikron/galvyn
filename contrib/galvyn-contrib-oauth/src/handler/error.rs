@@ -11,6 +11,7 @@ use galvyn_core::re_exports::mime::Mime;
 use galvyn_core::stuff::api_error::ApiError;
 use galvyn_core::stuff::api_json::ApiJson;
 use galvyn_core::stuff::schema::ApiStatusCode;
+use galvyn_core::stuff::schema::Never;
 use schemars::schema::Schema;
 use serde::Serialize;
 use tracing::info;
@@ -72,7 +73,7 @@ impl OauthErrorBuilder {
     pub fn map_rorm_error(&self) -> impl Fn(rorm::Error) -> OauthError {
         let location = Location::caller();
         |error: rorm::Error| {
-            ApiError::new(ApiStatusCode::InternalServerError, "Db operation failed")
+            ApiError::<Never>::new(ApiStatusCode::InternalServerError, "Db operation failed")
                 .with_manual_location(location)
                 .with_source(error)
                 .emit_tracing_event();
