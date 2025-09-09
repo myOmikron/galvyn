@@ -56,6 +56,10 @@ impl<E: Default> FormErrors<E> {
             Ok(())
         }
     }
+
+    pub fn fail<T>(self) -> ApiResult<T, E> {
+        Err(ApiError::FormError(self.inner))
+    }
 }
 
 impl<E> Deref for FormErrors<E> {
