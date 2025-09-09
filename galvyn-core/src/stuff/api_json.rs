@@ -1,4 +1,4 @@
-//! Alternative for [`axum::Json`] which produces our [`ApiError`] in case of failure
+//! Alternative for [`axum::Json`] which produces our [`InnerApiError`] in case of failure
 
 use axum::Json;
 use axum::body::Bytes;
@@ -19,7 +19,7 @@ use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
 use crate::stuff::api_error::ApiError;
 
-/// Alternative for [`Json`] which produces our [`ApiError`] in case of failure
+/// Alternative for [`Json`] which produces our [`InnerApiError`] in case of failure
 #[derive(Copy, Clone, Default, Debug)]
 pub struct ApiJson<T>(pub T);
 

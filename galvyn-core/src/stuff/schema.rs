@@ -32,10 +32,22 @@ pub enum ApiStatusCode {
     InternalServerError = 2000,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(untagged)]
+pub enum ApiErrorResponse<E = Never> {
+    ApiError(InnerApiErrorResponse),
+    FormError { result: ErrorConstant, error: E },
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub enum ErrorConstant {
+    Err,
+}
+
 /// The response that is sent in a case of an error
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[allow(missing_docs)]
-pub struct ApiErrorResponse {
+pub struct InnerApiErrorResponse {
     /// The Status code for the error.
     ///
     /// Important: Does not match http status codes

@@ -11,6 +11,7 @@ use axum::response::Response;
 #[cfg(feature = "opentelemetry")]
 use opentelemetry::trace::TraceId;
 use rorm::crud::update::UpdateBuilder;
+use schemars::JsonSchema;
 use schemars::schema::Schema;
 use thiserror::Error;
 use tracing::debug;
@@ -22,13 +23,21 @@ use crate::handler::response_body::ShouldBeResponseBody;
 use crate::stuff::api_json::ApiJson;
 use crate::stuff::schema::ApiErrorResponse;
 use crate::stuff::schema::ApiStatusCode;
+use crate::stuff::schema::ErrorConstant;
+use crate::stuff::schema::InnerApiErrorResponse;
+use crate::stuff::schema::Never;
 
 /// A type alias that includes the ApiError
-pub type ApiResult<T> = Result<T, ApiError>;
+pub type ApiResult<T, E = Never> = Result<T, ApiError<E>>;
+
+pub enum ApiError<E = Never> {
+    ApiError(InnerApiError),
+    FormError(E),
+}
 
 /// The common error that is returned from the handlers
 #[derive(Debug, Error)]
-pub struct ApiError {
+struct InnerApiError {
     /// Rough indication of the error reason (exposed to frontend)
     pub code: ApiStatusCode,
 
@@ -46,7 +55,7 @@ pub struct ApiError {
     pub trace_id: TraceId,
 }
 
-impl fmt::Display for ApiError {
+impl fmt::Display for InnerApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.code {
             ApiStatusCode::Unauthenticated
@@ -69,14 +78,14 @@ impl ApiError {
     /// Constructs a new `ApiError`
     #[track_caller]
     pub fn new(code: ApiStatusCode, context: &'static str) -> Self {
-        Self {
+        Self::ApiError(InnerApiError {
             code,
             context: Some(context),
             location: Location::caller(),
             source: None,
             #[cfg(feature = "opentelemetry")]
             trace_id: Self::get_trace_id(),
-        }
+        })
     }
 
     /// Constructs a new `ApiError` with [`ApiStatusCode::BadRequest`]
@@ -97,9 +106,16 @@ impl ApiError {
     }
 
     /// Adds a source to the `ApiError`
-    pub fn with_boxed_source(mut self, source: Box<dyn Error + Send + Sync + 'static>) -> Self {
-        self.source = Some(source);
-        self
+    pub fn with_boxed_source(self, source: Box<dyn Error + Send + Sync + 'static>) -> Self {
+        match self {
+            ApiError::ApiError(mut error) => {
+                error.source = Some(source);
+                ApiError::ApiError(error)
+            }
+            ApiError::FormError(_) => {
+                panic!();
+            }
+        }
     }
 
     /// Creates a closure for wrapping any error into an `ApiError::server_error`
@@ -114,14 +130,17 @@ impl ApiError {
 
     /// Emit a tracing event `error!` or `debug!` describing the `ApiError`
     pub fn emit_tracing_event(&self) {
-        let Self {
+        let Self::ApiError(InnerApiError {
             code,
             context,
             location,
             source,
             #[cfg(feature = "opentelemetry")]
                 trace_id: _, // The log message will hopefully be emitted in the same span
-        } = &self;
+        }) = &self
+        else {
+            return;
+        };
 
         match code {
             ApiStatusCode::Unauthenticated
@@ -157,9 +176,16 @@ impl ApiError {
     /// Adds a location to the `ApiError`
     ///
     /// Normally the location added automatically is enough.
-    pub fn with_manual_location(mut self, location: &'static Location<'static>) -> Self {
-        self.location = location;
-        self
+    pub fn with_manual_location(self, location: &'static Location<'static>) -> Self {
+        match self {
+            ApiError::ApiError(mut error) => {
+                error.location = location;
+                ApiError::ApiError(error)
+            }
+            ApiError::FormError(_) => {
+                panic!();
+            }
+        }
     }
 
     /// Retrieves the current span's trace id
@@ -179,43 +205,57 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         self.emit_tracing_event();
 
-        let res = (
-            if (self.code as u16) < 2000 {
-                StatusCode::BAD_REQUEST
-            } else {
-                StatusCode::INTERNAL_SERVER_ERROR
-            },
-            ApiJson(ApiErrorResponse {
-                status_code: self.code,
-                message: match self.code {
-                    ApiStatusCode::Unauthenticated => "Unauthenticated",
-                    ApiStatusCode::BadRequest => "Bad request",
-                    ApiStatusCode::InvalidJson => "Invalid json",
-                    ApiStatusCode::MissingPrivileges => "Missing privileges",
-                    ApiStatusCode::InternalServerError => "Internal server error",
-                }
-                .to_string(),
-                #[cfg(feature = "opentelemetry")]
-                trace_id: self.trace_id.to_string(),
-            }),
-        );
+        let response = match self {
+            ApiError::ApiError(error) => (
+                if (error.code as u16) < 2000 {
+                    StatusCode::BAD_REQUEST
+                } else {
+                    StatusCode::INTERNAL_SERVER_ERROR
+                },
+                ApiJson(ApiErrorResponse::ApiError(InnerApiErrorResponse {
+                    status_code: error.code,
+                    message: match error.code {
+                        ApiStatusCode::Unauthenticated => "Unauthenticated",
+                        ApiStatusCode::BadRequest => "Bad request",
+                        ApiStatusCode::InvalidJson => "Invalid json",
+                        ApiStatusCode::MissingPrivileges => "Missing privileges",
+                        ApiStatusCode::InternalServerError => "Internal server error",
+                    }
+                    .to_string(),
+                    #[cfg(feature = "opentelemetry")]
+                    trace_id: error.trace_id.to_string(),
+                })),
+            ),
+            ApiError::FormError(error) => (
+                StatusCode::BAD_REQUEST,
+                ApiJson(ApiErrorResponse::FormError {
+                    error,
+                    result: ErrorConstant::Err,
+                }),
+            ),
+        };
 
-        res.into_response()
+        response.into_response()
     }
 }
 
-impl ShouldBeResponseBody for ApiError {}
-impl ResponseBody for ApiError {
+impl<E> ShouldBeResponseBody for ApiError<E> {}
+impl<E: JsonSchema> ResponseBody for ApiError<E> {
     fn body(ctx: &mut EndpointContext) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
-        let schema = ctx.generator.generate::<ApiErrorResponse>();
         vec![
             (
                 StatusCode::BAD_REQUEST,
-                Some((mime::APPLICATION_JSON, Some(schema.clone()))),
+                Some((
+                    mime::APPLICATION_JSON,
+                    Some(ctx.generator.generate::<ApiErrorResponse<E>>()),
+                )),
             ),
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Some((mime::APPLICATION_JSON, Some(schema))),
+                Some((
+                    mime::APPLICATION_JSON,
+                    Some(ctx.generator.generate::<InnerApiErrorResponse>()),
+                )),
             ),
         ]
     }
@@ -231,20 +271,20 @@ impl<'rf, E, M> From<UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty
 /// Simple macro to reduce the noise of several identical `From` implementations
 ///
 /// It takes a list of error types
-/// which are supposed to be convertable into an [`ApiError::server_error`] simplicity.
+/// which are supposed to be convertable into an [`InnerApiError::server_error`] simplicity.
 macro_rules! impl_into_internal_server_error {
     ($($error:ty,)*) => {$(
         impl From<$error> for ApiError {
             #[track_caller]
             fn from(value: $error) -> Self {
-                Self {
+                ApiError::ApiError(InnerApiError {
                     code: ApiStatusCode::InternalServerError,
                     context: None,
                     location: Location::caller(),
                     source: Some(value.into()),
                     #[cfg(feature = "opentelemetry")]
                     trace_id: Self::get_trace_id(),
-                }
+                })
             }
         }
     )+};
