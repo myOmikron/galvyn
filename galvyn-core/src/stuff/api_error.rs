@@ -3,6 +3,8 @@
 
 use std::error::Error;
 use std::fmt;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::panic::Location;
 
 use axum::http::StatusCode;
@@ -33,6 +35,41 @@ pub type ApiResult<T, E = Never> = Result<T, ApiError<E>>;
 pub enum ApiError<E = Never> {
     ApiError(InnerApiError),
     FormError(E),
+}
+
+#[derive(Default)]
+pub struct FormErrors<E> {
+    inner: E,
+    modified: bool,
+}
+
+impl<E: Default> FormErrors<E> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn check(self) -> ApiResult<(), E> {
+        if self.modified {
+            Err(ApiError::FormError(self.inner))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl<E> Deref for FormErrors<E> {
+    type Target = E;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<E> DerefMut for FormErrors<E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.modified = true;
+        &mut self.inner
+    }
 }
 
 /// The common error that is returned from the handlers
