@@ -1,6 +1,7 @@
 //! This module holds the errors and the error conversion for handlers
 //! that are returned from handlers
 
+use std::any::TypeId;
 use std::error::Error;
 use std::fmt;
 use std::ops::Deref;
@@ -269,7 +270,7 @@ impl<T: Serialize> IntoResponse for ApiError<T> {
                 })),
             ),
             ApiError::FormError(error) => (
-                StatusCode::BAD_REQUEST,
+                StatusCode::OK,
                 ApiJson(ApiErrorResponse::FormError {
                     error,
                     result: ErrorConstant::Err,
@@ -282,24 +283,31 @@ impl<T: Serialize> IntoResponse for ApiError<T> {
 }
 
 impl<T> ShouldBeResponseBody for ApiError<T> {}
-impl<T: JsonSchema> ResponseBody for ApiError<T> {
+impl<T: JsonSchema + 'static> ResponseBody for ApiError<T> {
     fn body(ctx: &mut EndpointContext) -> Vec<(StatusCode, Option<(mime::Mime, Option<Schema>)>)> {
-        vec![
+        let mut bodies = Vec::new();
+
+        if TypeId::of::<T>() != TypeId::of::<Never>() {
+            let form_error = ctx.generator.generate::<ApiErrorResponse<T>>();
+            bodies.extend([(
+                StatusCode::OK,
+                Some((mime::APPLICATION_JSON, Some(form_error))),
+            )]);
+        }
+
+        let api_error = ctx.generator.generate::<ApiErrorResponse<T>>();
+        bodies.extend([
             (
                 StatusCode::BAD_REQUEST,
-                Some((
-                    mime::APPLICATION_JSON,
-                    Some(ctx.generator.generate::<ApiErrorResponse<T>>()),
-                )),
+                Some((mime::APPLICATION_JSON, Some(api_error.clone()))),
             ),
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Some((
-                    mime::APPLICATION_JSON,
-                    Some(ctx.generator.generate::<InnerApiErrorResponse>()),
-                )),
+                Some((mime::APPLICATION_JSON, Some(api_error))),
             ),
-        ]
+        ]);
+
+        bodies
     }
 }
 
