@@ -25,7 +25,6 @@ bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { version = "~1" }
 serde_json = { version = "~1" }
-serde_repr = { version = "~0.1" }
 schemars = { workspace = true, features = ["uuid1"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }

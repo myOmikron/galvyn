@@ -18,6 +18,7 @@ use crate::handler::request_body::ShouldBeRequestBody;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
 use crate::stuff::api_error::ApiError;
+use crate::stuff::api_error::core::CoreApiError;
 
 /// Alternative for [`Json`] which produces our [`ApiError`] in case of failure
 #[derive(Copy, Clone, Default, Debug)]
@@ -57,7 +58,7 @@ impl<T: Serialize> IntoResponse for ApiJson<T> {
                 buf,
             )
                 .into_response(),
-            Err(err) => ApiError::server_error("Failed to serialize response body")
+            Err(err) => CoreApiError::server_error("Failed to serialize response body")
                 .with_source(err)
                 .into_response(),
         }

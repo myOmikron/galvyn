@@ -3,7 +3,6 @@
 use std::borrow::Cow;
 
 use schemars::JsonSchema;
-use schemars::JsonSchema_repr;
 use schemars::r#gen::SchemaGenerator;
 use schemars::schema::InstanceType;
 use schemars::schema::Metadata;
@@ -12,40 +11,32 @@ use schemars::schema::SchemaObject;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
-use serde_repr::Deserialize_repr;
-use serde_repr::Serialize_repr;
 use time::Date;
 use time::OffsetDateTime;
 use time::Time;
 use uuid::Uuid;
 
-/// The Status code that are returned throughout the API
-#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, JsonSchema_repr)]
-#[repr(u16)]
-#[allow(missing_docs)]
-pub enum ApiStatusCode {
-    Unauthenticated = 1000,
-    BadRequest = 1001,
-    InvalidJson = 1002,
-    MissingPrivileges = 1003,
+/// The response that is sent in a case of an error the caller should present his user
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct FormErrorResponse<T> {
+    /// A constant `"Err"` used to differentiate this schema from any other "Ok" schema
+    pub result: ErrorConstant,
 
-    InternalServerError = 2000,
+    /// The actual error struct
+    pub error: T,
 }
 
-/// The response that is sent in a case of an error
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+/// Constant string `"Err"` which is documented by schemars
+#[derive(Debug, Clone, Default, Deserialize, Serialize, JsonSchema)]
 #[allow(missing_docs)]
+pub enum ErrorConstant {
+    #[default]
+    Err,
+}
+
+/// The response that is sent in a case of an error the caller should report to an admin
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct ApiErrorResponse {
-    /// The Status code for the error.
-    ///
-    /// Important: Does not match http status codes
-    pub status_code: ApiStatusCode,
-
-    /// A human-readable error message.
-    ///
-    /// May be used for displaying purposes
-    pub message: String,
-
     /// ID of the opentelemetry trace this error originated in
     #[cfg(feature = "opentelemetry")]
     pub trace_id: String,
