@@ -12,6 +12,7 @@ use schemars::JsonSchema;
 use schemars::schema::Schema;
 use serde::Serialize;
 
+pub use self::aggregator::FormErrors;
 use crate::handler::context::EndpointContext;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
@@ -20,6 +21,7 @@ use crate::stuff::api_json::ApiJson;
 use crate::stuff::schema::FormErrorResponse;
 use crate::stuff::schema::Never;
 
+mod aggregator;
 pub mod core;
 
 /// A type alias that includes the ApiError
