@@ -28,7 +28,7 @@ use crate::stuff::api_json::ApiJson;
 use crate::stuff::schema::ApiErrorResponse;
 use crate::stuff::schema::ApiStatusCode;
 use crate::stuff::schema::ErrorConstant;
-use crate::stuff::schema::InnerApiErrorResponse;
+use crate::stuff::schema::FormErrorResponse;
 use crate::stuff::schema::Never;
 
 /// A type alias that includes the ApiError
@@ -248,14 +248,14 @@ impl<T: Serialize> IntoResponse for ApiError<T> {
     fn into_response(self) -> Response {
         self.emit_tracing_event();
 
-        let response = match self {
+        match self {
             ApiError::ApiError(error) => (
                 if (error.code as u16) < 2000 {
                     StatusCode::BAD_REQUEST
                 } else {
                     StatusCode::INTERNAL_SERVER_ERROR
                 },
-                ApiJson(ApiErrorResponse::ApiError(InnerApiErrorResponse {
+                ApiJson(ApiErrorResponse {
                     status_code: error.code,
                     message: match error.code {
                         ApiStatusCode::Unauthenticated => "Unauthenticated",
@@ -267,18 +267,18 @@ impl<T: Serialize> IntoResponse for ApiError<T> {
                     .to_string(),
                     #[cfg(feature = "opentelemetry")]
                     trace_id: error.trace_id.to_string(),
-                })),
-            ),
+                }),
+            )
+                .into_response(),
             ApiError::FormError(error) => (
                 StatusCode::OK,
-                ApiJson(ApiErrorResponse::FormError {
+                ApiJson(FormErrorResponse {
                     error,
                     result: ErrorConstant::Err,
                 }),
-            ),
-        };
-
-        response.into_response()
+            )
+                .into_response(),
+        }
     }
 }
 
@@ -288,14 +288,14 @@ impl<T: JsonSchema + 'static> ResponseBody for ApiError<T> {
         let mut bodies = Vec::new();
 
         if TypeId::of::<T>() != TypeId::of::<Never>() {
-            let form_error = ctx.generator.generate::<ApiErrorResponse<T>>();
+            let form_error = ctx.generator.generate::<FormErrorResponse<T>>();
             bodies.extend([(
                 StatusCode::OK,
                 Some((mime::APPLICATION_JSON, Some(form_error))),
             )]);
         }
 
-        let api_error = ctx.generator.generate::<ApiErrorResponse<T>>();
+        let api_error = ctx.generator.generate::<ApiErrorResponse>();
         bodies.extend([
             (
                 StatusCode::BAD_REQUEST,

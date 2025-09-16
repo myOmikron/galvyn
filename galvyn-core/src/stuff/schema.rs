@@ -19,6 +19,17 @@ use time::OffsetDateTime;
 use time::Time;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct FormErrorResponse<E = Never> {
+    pub result: ErrorConstant,
+    pub error: E,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub enum ErrorConstant {
+    Err,
+}
+
 /// The Status code that are returned throughout the API
 #[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, JsonSchema_repr)]
 #[repr(u16)]
@@ -32,22 +43,10 @@ pub enum ApiStatusCode {
     InternalServerError = 2000,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-#[serde(untagged)]
-pub enum ApiErrorResponse<E = Never> {
-    ApiError(InnerApiErrorResponse),
-    FormError { result: ErrorConstant, error: E },
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-pub enum ErrorConstant {
-    Err,
-}
-
 /// The response that is sent in a case of an error
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[allow(missing_docs)]
-pub struct InnerApiErrorResponse {
+pub struct ApiErrorResponse {
     /// The Status code for the error.
     ///
     /// Important: Does not match http status codes
