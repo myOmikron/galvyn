@@ -250,10 +250,10 @@ impl<T: Serialize> IntoResponse for ApiError<T> {
 
         match self {
             ApiError::ApiError(error) => (
-                if (error.code as u16) < 2000 {
-                    StatusCode::BAD_REQUEST
-                } else {
-                    StatusCode::INTERNAL_SERVER_ERROR
+                match error.code {
+                    ApiStatusCode::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+                    ApiStatusCode::Unauthenticated => StatusCode::UNAUTHORIZED,
+                    _ => StatusCode::BAD_REQUEST,
                 },
                 ApiJson(ApiErrorResponse {
                     status_code: error.code,
@@ -299,6 +299,10 @@ impl<T: JsonSchema + 'static> ResponseBody for ApiError<T> {
         bodies.extend([
             (
                 StatusCode::BAD_REQUEST,
+                Some((mime::APPLICATION_JSON, Some(api_error.clone()))),
+            ),
+            (
+                StatusCode::UNAUTHORIZED,
                 Some((mime::APPLICATION_JSON, Some(api_error.clone()))),
             ),
             (
