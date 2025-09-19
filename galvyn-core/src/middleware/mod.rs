@@ -14,6 +14,8 @@ use futures_lite::future::Boxed;
 use tower::Layer;
 use tower::Service;
 
+pub mod catch_unwind;
+
 /// A middleware wraps a group of handler to alter their behaviour.
 ///
 /// This trait is an even simpler version of [`GalvynMiddleware`].
