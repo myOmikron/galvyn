@@ -69,7 +69,6 @@ tokio = { workspace = true, default-features = false }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }
-futures = { version = "~0.3" }
 
 # Runtime agnostic primitives for structured concurrency
 futures-concurrency = { version = "~7", default-features = false, features = ["alloc"] }

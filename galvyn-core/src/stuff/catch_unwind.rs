@@ -2,12 +2,15 @@
 //! and converts it into a `500` response and a logged error.
 
 use std::convert::Infallible;
+use std::future::poll_fn;
 use std::panic::AssertUnwindSafe;
+use std::panic::catch_unwind;
+use std::pin::pin;
+use std::task::Poll;
 
 use axum::extract::Request;
 use axum::response::IntoResponse;
 use axum::response::Response;
-use futures::FutureExt;
 
 use crate::middleware::AxumService;
 use crate::middleware::GalvynMiddleware;
@@ -23,11 +26,16 @@ impl GalvynMiddleware for CatchUnwindLayer {
         mut inner: S,
         request: Request,
     ) -> Result<Response, Infallible> {
-        match AssertUnwindSafe(inner.call(request)).catch_unwind().await {
-            Ok(response) => Ok(response.into_response()),
-            Err(_payload) => {
-                Ok(CoreApiError::server_error("Caught panic in handler").into_response())
-            }
-        }
+        let mut inner = pin!(inner.call(request));
+        Ok(poll_fn(
+            |cx| match catch_unwind(AssertUnwindSafe(|| inner.as_mut().poll(cx))) {
+                Ok(Poll::Pending) => Poll::Pending,
+                Ok(Poll::Ready(res)) => Poll::Ready(res.into_response()),
+                Err(_payload) => Poll::Ready(
+                    CoreApiError::server_error("Caught panic in handler").into_response(),
+                ),
+            },
+        )
+        .await)
     }
 }
