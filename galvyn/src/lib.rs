@@ -1,6 +1,7 @@
 #[cfg(feature = "contrib")]
 pub mod contrib {
     pub use galvyn_contrib_auth as auth;
+    pub use galvyn_contrib_settings as settings;
     // pub use galvyn_contrib_tracing as tracing;
 }
 
