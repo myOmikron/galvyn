@@ -4,6 +4,7 @@
 use std::any::TypeId;
 use std::error::Error;
 use std::fmt;
+use std::ops::Deref;
 use std::panic::Location;
 
 use axum::http::StatusCode;
@@ -128,6 +129,16 @@ impl Error for ApiError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             ApiError::ApiError(core) => Error::source(core),
+            ApiError::FormError(never) => match *never {},
+        }
+    }
+}
+impl Deref for ApiError {
+    type Target = CoreApiError;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            ApiError::ApiError(core) => core,
             ApiError::FormError(never) => match *never {},
         }
     }
