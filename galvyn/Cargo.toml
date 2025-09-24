@@ -57,10 +57,11 @@ default = [
     "graceful-shutdown",
     "schemars/url",
 ]
+# Includes all contrib crates
 contrib = [
-    "dep:galvyn-contrib-auth",
-    "dep:galvyn-contrib-oauth",
-    "dep:galvyn-contrib-settings",
+    "contrib-auth",
+    "contrib-oauth",
+    "contrib-settings",
 ]
 openapi = [
     "dep:openapiv3",
@@ -72,6 +73,15 @@ opentelemetry = [
 
 # Enables a graceful shutdown upon receiving a termination signal
 graceful-shutdown = ["dep:signal-hook", "dep:signal-hook-tokio"]
+
+# Includes the galvyn-contrib-auth crate
+contrib-auth = ["dep:galvyn-contrib-auth"]
+
+# Includes the galvyn-contrib-oauth crate
+contrib-oauth = ["dep:galvyn-contrib-oauth"]
+
+# Includes the galvyn-contrib-settings crate
+contrib-settings = ["dep:galvyn-contrib-settings"]
 
 # ------------- #
 # Rorm features #

@@ -1,9 +1,4 @@
-#[cfg(feature = "contrib")]
-pub mod contrib {
-    pub use galvyn_contrib_auth as auth;
-    pub use galvyn_contrib_settings as settings;
-    // pub use galvyn_contrib_tracing as tracing;
-}
+pub mod contrib;
 
 /// Re-export of [`rorm`](galvyn_core::re_exports::rorm)
 pub mod rorm {
