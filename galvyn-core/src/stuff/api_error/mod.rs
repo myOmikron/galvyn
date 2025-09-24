@@ -3,6 +3,7 @@
 
 use std::any::TypeId;
 use std::error::Error;
+use std::fmt;
 use std::panic::Location;
 
 use axum::http::StatusCode;
@@ -111,6 +112,23 @@ impl<E> ApiError<E> {
         match self {
             ApiError::ApiError(x) => ApiError::ApiError(map(x)),
             ApiError::FormError(_) => panic!(),
+        }
+    }
+}
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ApiError::ApiError(core) => fmt::Display::fmt(core, f),
+            ApiError::FormError(never) => match *never {},
+        }
+    }
+}
+impl Error for ApiError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ApiError::ApiError(core) => Error::source(core),
+            ApiError::FormError(never) => match *never {},
         }
     }
 }
