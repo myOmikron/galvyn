@@ -52,6 +52,7 @@ schemars = { workspace = true, optional = true }
 [features]
 default = [
     "rorm-default",
+    "axum-default",
     "openapi",
     "opentelemetry",
     "graceful-shutdown",
@@ -132,3 +133,15 @@ rorm-rustls = ["rorm/rustls"]
 
 # Enables connecting to the database over tls support using native-tls
 rorm-native-tls = ["rorm/native-tls"]
+
+# ------------- #
+# Axum features #
+# ------------- #
+
+# Collection of all axum features galvyn considers "default"
+axum-default = [
+    "axum-ws",
+]
+
+# Adds a websocket implementation
+axum-ws = ["axum/ws"]
