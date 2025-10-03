@@ -14,6 +14,7 @@ use serde_json::json;
 use time::Date;
 use time::OffsetDateTime;
 use time::Time;
+use time::serde::format_description;
 use uuid::Uuid;
 
 /// The response that is sent in a case of an error the caller should present his user
@@ -180,7 +181,7 @@ pub struct SchemaTime(pub Time);
 
 /// Wrapper around [`Date`] to add a [`JsonSchema`] impl and select RFC 3339 as serde repr.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
-pub struct SchemaDate(pub Date);
+pub struct SchemaDate(#[serde(with = "rfc3339_date")] pub Date);
 
 /// Implements [`JsonSchema`] for a type which is just a string with a well-defined format
 ///
@@ -221,3 +222,5 @@ macro_rules! formatted_string_impl {
 formatted_string_impl!(SchemaDateTime, format: "date-time", example: "1970-01-01T00:00:00.0Z");
 formatted_string_impl!(SchemaTime, format: "partial-date-time", example: "00:00:00.0");
 formatted_string_impl!(SchemaDate, format: "date", example: "1970-01-01");
+
+format_description!(rfc3339_date, Date, "[year]-[month]-[day]");
