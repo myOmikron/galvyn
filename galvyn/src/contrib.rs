@@ -8,3 +8,5 @@ pub use galvyn_contrib_auth as auth;
 pub use galvyn_contrib_oauth as oauth;
 #[cfg(feature = "contrib-settings")]
 pub use galvyn_contrib_settings as settings;
+#[cfg(feature = "contrib-timers")]
+pub use galvyn_contrib_timers as timers;

@@ -1,0 +1,12 @@
+[package]
+name = "galvyn-contrib-timers"
+version = "0.1.0"
+edition = "2024"
+license = "MPL-2.0"
+
+[dependencies]
+galvyn-core = { version = "*", path = "../../galvyn-core" }
+rorm = { workspace = true }
+thiserror = { version = "~2" }
+tokio = { workspace = true, features = ["time"] }
+generational-arena = "~0.2" # TODO: write our own?
