@@ -32,26 +32,26 @@ pub type ApiResult<T, E = Never> = Result<T, ApiError<E>>;
 /// The common error that is returned from the handlers
 #[derive(Debug)]
 pub enum ApiError<E = Never> {
-    ApiError(CoreApiError),
+    CoreApiError(CoreApiError),
     FormError(E),
 }
 impl<E> ApiError<E> {
     /// Constructs a new `ApiError` with [`ApiErrorStatusCode::BadRequest`]
     #[track_caller]
     pub fn bad_request(context: &'static str) -> Self {
-        Self::ApiError(CoreApiError::bad_request(context))
+        Self::CoreApiError(CoreApiError::bad_request(context))
     }
 
     /// Constructs a new `ApiError` with [`ApiErrorStatusCode::ServerError`]
     #[track_caller]
     pub fn server_error(context: &'static str) -> Self {
-        Self::ApiError(CoreApiError::server_error(context))
+        Self::CoreApiError(CoreApiError::server_error(context))
     }
 
     /// Constructs a new `ApiError` with [`ApiErrorStatusCode::Unauthorized`]
     #[track_caller]
     pub fn unauthorized(context: &'static str) -> Self {
-        Self::ApiError(CoreApiError::unauthorized(context))
+        Self::CoreApiError(CoreApiError::unauthorized(context))
     }
 
     /// Adds a source to the `ApiError`
@@ -103,7 +103,7 @@ impl<E> ApiError<E> {
     /// `ApiError::FormError(_)` won't log anything.
     pub fn emit_tracing_event(&self) {
         match self {
-            ApiError::ApiError(core) => core.emit_tracing_event(),
+            ApiError::CoreApiError(core) => core.emit_tracing_event(),
             ApiError::FormError(_) => {}
         }
     }
@@ -111,7 +111,7 @@ impl<E> ApiError<E> {
     #[track_caller]
     fn map_api_error(self, map: impl FnOnce(CoreApiError) -> CoreApiError) -> Self {
         match self {
-            ApiError::ApiError(x) => ApiError::ApiError(map(x)),
+            ApiError::CoreApiError(x) => ApiError::CoreApiError(map(x)),
             ApiError::FormError(_) => panic!(),
         }
     }
@@ -120,7 +120,7 @@ impl<E> ApiError<E> {
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ApiError::ApiError(core) => fmt::Display::fmt(core, f),
+            ApiError::CoreApiError(core) => fmt::Display::fmt(core, f),
             ApiError::FormError(never) => match *never {},
         }
     }
@@ -128,7 +128,7 @@ impl fmt::Display for ApiError {
 impl Error for ApiError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ApiError::ApiError(core) => Error::source(core),
+            ApiError::CoreApiError(core) => Error::source(core),
             ApiError::FormError(never) => match *never {},
         }
     }
@@ -138,7 +138,7 @@ impl Deref for ApiError {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            ApiError::ApiError(core) => core,
+            ApiError::CoreApiError(core) => core,
             ApiError::FormError(never) => match *never {},
         }
     }
@@ -148,7 +148,7 @@ impl<E: Serialize> IntoResponse for ApiError<E> {
     fn into_response(self) -> Response {
         self.emit_tracing_event();
         match self {
-            ApiError::ApiError(core) => core.into_response(),
+            ApiError::CoreApiError(core) => core.into_response(),
             ApiError::FormError(error) => ApiJson(FormErrorResponse {
                 error,
                 result: Default::default(),
@@ -179,6 +179,6 @@ where
     CoreApiError: From<F>,
 {
     fn from(value: F) -> Self {
-        Self::ApiError(value.into())
+        Self::CoreApiError(value.into())
     }
 }
