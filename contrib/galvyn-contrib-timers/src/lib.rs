@@ -3,27 +3,18 @@
 //! think "cron" or "systemd-timers".
 #![warn(missing_docs)]
 
-use std::convert::Infallible;
-use std::future::pending;
-use std::sync::RwLock;
 use std::time::Duration;
 
 use galvyn_core::InitError;
 use galvyn_core::Module;
-use galvyn_core::PostInitError;
 use galvyn_core::PreInitError;
-use tokio::time;
 
 pub use crate::setup::TimersSetup;
-use crate::state::TimersState;
 
 mod setup;
-mod state;
 
 /// TODO
-pub struct Timers {
-    state: RwLock<TimersState>,
-}
+pub struct Timers {}
 
 /// Callback invoked by a timer
 ///
@@ -47,21 +38,15 @@ impl<T: FnMut() + Send + Sync + 'static> TimerCallback for T {
 
 impl Timers {
     /// Schedules `callback` to run every `duration`
-    pub fn schedule_every(&mut self, duration: Duration, callback: impl TimerCallback) {
-        self.state
-            .write()
-            .unwrap()
-            .schedule_every(duration, callback);
-    }
-
-    async fn run(&'static self) -> Infallible {
-        loop {
-            let Some(next_run) = self.state.read().unwrap().next_time() else {
-                return pending::<Infallible>().await;
-            };
-            time::sleep_until(next_run).await;
-            self.state.write().unwrap().run(next_run);
-        }
+    pub fn schedule_every(&mut self, duration: Duration, mut callback: impl TimerCallback) {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(duration);
+            interval.tick().await;
+            loop {
+                interval.tick().await;
+                callback.call();
+            }
+        });
     }
 }
 
@@ -79,14 +64,7 @@ impl Module for Timers {
         PreInit {}: Self::PreInit,
         (): &mut Self::Dependencies,
     ) -> Result<Self, InitError> {
-        Ok(Self {
-            state: RwLock::new(TimersState::new()),
-        })
-    }
-
-    async fn post_init(&'static self) -> Result<(), PostInitError> {
-        tokio::spawn(self.run());
-        Ok(())
+        Ok(Self {})
     }
 }
 
