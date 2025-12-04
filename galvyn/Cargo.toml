@@ -20,7 +20,7 @@ rorm = { workspace = true }
 galvyn-contrib-auth = { version = "~0.1", path = "../contrib/galvyn-contrib-auth", optional = true }
 galvyn-contrib-oauth = { version = "~0.1", path = "../contrib/galvyn-contrib-oauth", optional = true }
 galvyn-contrib-settings = { version = "~0.1", path = "../contrib/galvyn-contrib-settings", optional = true }
-# galvyn-contrib-timers = { version = "~0.1", path = "../contrib/galvyn-contrib-timers", optional = true }
+galvyn-contrib-timers = { version = "~0.1", path = "../contrib/galvyn-contrib-timers", optional = true }
 
 # Error handling
 thiserror = { version = "~2" }
@@ -64,7 +64,7 @@ contrib = [
     "contrib-auth",
     "contrib-oauth",
     "contrib-settings",
-    # "contrib-timers",
+    "contrib-timers",
 ]
 openapi = [
     "dep:openapiv3",
@@ -87,7 +87,7 @@ contrib-oauth = ["dep:galvyn-contrib-oauth"]
 contrib-settings = ["dep:galvyn-contrib-settings"]
 
 # Includes the galvyn-contrib-timers crate
-# contrib-timers = ["dep:galvyn-contrib-timers"]
+contrib-timers = ["dep:galvyn-contrib-timers"]
 
 # ------------- #
 # Rorm features #

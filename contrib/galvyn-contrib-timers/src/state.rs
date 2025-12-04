@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::time::Duration;
 
-use generational_arena::Arena;
-use generational_arena::Index;
+use thunderdome::Arena;
+use thunderdome::Index;
 use tokio::time::Instant;
 
 use crate::TimerCallback;

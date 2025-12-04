@@ -9,4 +9,4 @@ galvyn-core = { version = "*", path = "../../galvyn-core" }
 rorm = { workspace = true }
 thiserror = { version = "~2" }
 tokio = { workspace = true, features = ["time"] }
-generational-arena = "~0.2" # TODO: write our own?
+thunderdome = { version = "~0.6" } # TODO: write our own?
