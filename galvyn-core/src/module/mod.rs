@@ -104,8 +104,12 @@ pub trait Module: Sized + Send + Sync + 'static {
     ///
     /// # Panics
     /// If the module has not been initialized yet.
+    #[track_caller]
     fn global() -> &'static Self {
-        Self::try_global().unwrap_or_else(|error| panic!("{error}"))
+        match Self::try_global() {
+            Ok(x) => x,
+            Err(error) => panic!("{error}"),
+        }
     }
 
     /// Gets the module's global instance
