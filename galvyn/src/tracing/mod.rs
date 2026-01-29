@@ -18,6 +18,7 @@ use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::registry::LookupSpan;
 
+pub mod extensions;
 #[cfg(feature = "opentelemetry")]
 pub mod opentelemetry;
 
