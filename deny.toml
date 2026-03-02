@@ -12,6 +12,16 @@ ignore = [
 
     # ansi_term is unmaintained
     "RUSTSEC-2021-0139", # tracing-forerst depends on it and an issues has alreay been created
+
+    # rustls-pemfile is unmaintained
+    "RUSTSEC-2025-0134",
+    # A lot of unicode crates are unmaintained
+    "RUSTSEC-2025-0081",
+    "RUSTSEC-2025-0075",
+    "RUSTSEC-2025-0080",
+    "RUSTSEC-2025-0074",
+    "RUSTSEC-2025-0104",
+    "RUSTSEC-2025-0098",
 ]
 
 [licenses]
