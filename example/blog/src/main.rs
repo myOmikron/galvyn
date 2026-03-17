@@ -59,14 +59,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register_module::<<Settings as ApplicationSettingsExt>::Module>(Default::default())
         .init_modules()
         .await?
-        .add_routes(
+        .add_listener(
+            SocketAddr::from_str("127.0.0.1:8080")?,
             GalvynRouter::new()
                 .openapi_tag("Main")
                 .handler(test::<1337, ()>)
                 .handler(shutdown)
                 .handler(openapi),
         )
-        .start(SocketAddr::from_str("127.0.0.1:8080")?)
+        .start()
         .await?;
 
     Ok(())

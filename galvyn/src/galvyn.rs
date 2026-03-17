@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem;
 use std::net::SocketAddr;
 
@@ -8,6 +9,7 @@ use galvyn_core::router::GalvynRoute;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
 use tokio::sync::SetOnce;
+use tokio::task::JoinSet;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -25,7 +27,7 @@ use crate::panic_hook::set_panic_hook;
 /// Start creating your server by calling [`Galvyn::new`].
 #[non_exhaustive]
 pub struct Galvyn {
-    routes: Vec<GalvynRoute>,
+    routes: HashMap<SocketAddr, Vec<GalvynRoute>>,
 }
 
 /// General setup options for galvyn.
@@ -92,8 +94,8 @@ impl Galvyn {
 
     /// Quick and dirty solution to expose the registered handlers after startup
     #[doc(hidden)]
-    pub fn get_routes(&self) -> &[GalvynRoute] {
-        &self.routes
+    pub fn get_routes(&self) -> impl Iterator<Item = &'_ GalvynRoute> {
+        self.routes.values().flatten()
     }
 
     /// Attempts to shut down the server gracefully
@@ -176,33 +178,46 @@ impl ModuleBuilder {
     pub async fn init_modules(&mut self) -> Result<RouterBuilder, GalvynError> {
         self.modules.init().await?;
         Ok(RouterBuilder {
-            routes: GalvynRouter::new(),
+            listener: HashMap::new(),
             setup: mem::take(&mut self.setup),
         })
     }
 }
 
 pub struct RouterBuilder {
-    routes: GalvynRouter,
+    listener: HashMap<SocketAddr, GalvynRouter>,
     setup: GalvynSetup,
 }
 
 impl RouterBuilder {
     /// Adds a router to the builder
-    pub fn add_routes(&mut self, router: GalvynRouter) -> &mut Self {
-        let this = mem::take(&mut self.routes);
-        self.routes = this.merge(router);
+    #[track_caller]
+    pub fn add_listener(&mut self, address: SocketAddr, router: GalvynRouter) -> &mut Self {
+        let existing = self.listener.insert(address, router);
+        if existing.is_some() {
+            panic!("Address has already been added");
+        }
         self
     }
 
     /// Starts the webserver
-    pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
-        #[allow(unused_mut, reason = "Usage is behind feature flags")]
-        let (mut router, routes) = mem::take(&mut self.routes).finish();
+    pub async fn start(&mut self) -> Result<(), GalvynError> {
+        assert!(!self.listener.is_empty(), "Missing address to listen on");
 
         #[cfg(feature = "sessions")]
         if !self.setup.disable_sessions {
-            router = router.layer(galvyn_core::session::layer());
+            for router in self.listener.values_mut() {
+                *router = mem::take(router).layer(galvyn_core::session::layer());
+            }
+        }
+
+        let mut routes = HashMap::new();
+        let mut axum_routers = Vec::new();
+        for (socket_addr, galvyn_router) in self.listener.drain() {
+            let (axum_router, addr_routes) = galvyn_router.finish();
+
+            routes.insert(socket_addr, addr_routes);
+            axum_routers.push((socket_addr, axum_router));
         }
 
         INSTANCE.set(Galvyn {
@@ -221,16 +236,23 @@ impl RouterBuilder {
             });
         }
 
-        info!("Starting to serve webserver on http://{socket_addr}");
-        let socket = TcpListener::bind(socket_addr).await?;
-        let serve = axum::serve(socket, router).with_graceful_shutdown(shutdown.wait_for_started());
+        let mut axum_tasks = JoinSet::new();
+        for (socket_addr, axum_router) in axum_routers {
+            info!("Starting to serve webserver on http://{socket_addr}");
+            let axum_future = axum::serve(TcpListener::bind(socket_addr).await?, axum_router)
+                .with_graceful_shutdown(shutdown.wait_for_started());
+            axum_tasks.spawn(async move {
+                if axum_future.await.is_err() {
+                    // Axum said they would never error.
+                    // They would only return (with ok) when the graceful shutdown finished.
+                    error!("Unreachable, this is a bug in galvyn");
+                }
+            });
+        }
+
         {
             let _blocker = shutdown.block();
-            if serve.await.is_err() {
-                // Axum said they would never error.
-                // They would only return (with ok) when the graceful shutdown finished.
-                error!("Unreachable, this is a bug in galvyn");
-            }
+            axum_tasks.join_all().await;
         }
 
         shutdown.wait_for_done().await;
