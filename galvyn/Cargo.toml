@@ -35,7 +35,7 @@ futures-lite = { version = "~2", default-features = false, features = ["alloc"] 
 tracing = { version = "~0.1" }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
-reqwest = { version = "~0.12" }
+reqwest = { version = "~0.12", default-features = false, features = ["rustls-tls"] }
 
 galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
 openapiv3 = { version = "~2", optional = true }
