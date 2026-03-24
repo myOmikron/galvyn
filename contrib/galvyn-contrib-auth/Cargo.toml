@@ -18,7 +18,7 @@ rorm = { workspace = true }
 envy = { version = "~0.4" }
 
 # oidc
-openidconnect = { version = "~3", features = ["accept-rfc3339-timestamps"] }
+openidconnect = { version = "~4", features = ["accept-rfc3339-timestamps"] }
 
 # password hashing
 argon2 = { version = "~0.5", features = ["std"] }

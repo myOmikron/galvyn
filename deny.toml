@@ -6,19 +6,6 @@ yanked = "deny"
 ignore = [
     # marvin attack on rsa
     "RUSTSEC-2023-0071", # not patched yet
-
-    # paste is unmaintained
-    "RUSTSEC-2024-0436", # it is a tiny macro utility only used rmp internally and works for them
-
-    # rustls-pemfile is unmaintained
-    "RUSTSEC-2025-0134",
-    # A lot of unicode crates are unmaintained
-    "RUSTSEC-2025-0081",
-    "RUSTSEC-2025-0075",
-    "RUSTSEC-2025-0080",
-    "RUSTSEC-2025-0074",
-    "RUSTSEC-2025-0104",
-    "RUSTSEC-2025-0098",
 ]
 
 [licenses]
