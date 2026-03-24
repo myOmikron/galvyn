@@ -6,7 +6,6 @@ use tracing::field::Field;
 use tracing::field::Visit;
 use tracing::span;
 use tracing::Event;
-use tracing::Span;
 
 /// Additional `record_...` methods for [`Span`] and [`Event`]
 ///

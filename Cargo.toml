@@ -20,7 +20,7 @@ tokio = { version = ">=1.44.2", default-features = false }
 schemars = { version = "~0.8", default-features = false }
 
 # Opentelemtry
-tracing-opentelemetry = { version = "0.25" }
-opentelemetry = { version = "0.24" }
-opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.17" }
+tracing-opentelemetry = { version = "~0.32" }
+opentelemetry = { version = "~0.31" }
+opentelemetry_sdk = { version = "~0.31", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "~0.31", features = ["grpc-tonic"] }

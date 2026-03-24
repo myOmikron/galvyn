@@ -118,19 +118,21 @@ where
         let current_span = ctx.event_scope().and_then(|mut scope| scope.next());
         #[cfg(feature = "opentelemetry")]
         {
-            use galvyn_core::re_exports::opentelemetry::trace::SpanContext;
-            use galvyn_core::re_exports::opentelemetry::trace::TraceContextExt;
             use galvyn_core::re_exports::tracing_opentelemetry::OtelData;
-            let otel_context = current_span
+            let (trace_id, span_id) = current_span
                 .as_ref()
                 .and_then(|span| {
                     span.extensions()
                         .get::<OtelData>()
-                        .map(|data| data.parent_cx.span().span_context().clone())
+                        .map(|data| (data.trace_id(), data.span_id()))
                 })
-                .unwrap_or(SpanContext::NONE);
-            json.insert("trace_id", otel_context.trace_id().to_string());
-            json.insert("span_id", otel_context.span_id().to_string());
+                .unwrap_or((None, None));
+            if let Some(trace_id) = trace_id {
+                json.insert("trace_id", trace_id.to_string());
+            }
+            if let Some(span_id) = span_id {
+                json.insert("span_id", span_id.to_string());
+            }
         }
         json.insert("service_name", self.service_name.clone());
         if let Some(current_span) = current_span {

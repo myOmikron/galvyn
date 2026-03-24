@@ -9,16 +9,13 @@ use galvyn_core::middleware::SimpleGalvynMiddleware;
 use galvyn_core::re_exports::opentelemetry::propagation::Extractor;
 use galvyn_core::re_exports::opentelemetry::propagation::Injector;
 use galvyn_core::re_exports::opentelemetry::propagation::TextMapPropagator;
-use galvyn_core::re_exports::opentelemetry::trace::TraceError;
 use galvyn_core::re_exports::opentelemetry::trace::TracerProvider;
 use galvyn_core::re_exports::opentelemetry::Context;
-use galvyn_core::re_exports::opentelemetry::Key;
-use galvyn_core::re_exports::opentelemetry::KeyValue;
-use galvyn_core::re_exports::opentelemetry::Value;
+use galvyn_core::re_exports::opentelemetry_otlp::ExporterBuildError;
+use galvyn_core::re_exports::opentelemetry_otlp::SpanExporter;
 use galvyn_core::re_exports::opentelemetry_otlp::WithExportConfig;
 use galvyn_core::re_exports::opentelemetry_sdk::propagation::TraceContextPropagator;
-use galvyn_core::re_exports::opentelemetry_sdk::runtime;
-use galvyn_core::re_exports::opentelemetry_sdk::trace;
+use galvyn_core::re_exports::opentelemetry_sdk::trace::SdkTracerProvider;
 use galvyn_core::re_exports::opentelemetry_sdk::Resource;
 use galvyn_core::re_exports::tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing::warn;
@@ -27,7 +24,6 @@ use tracing::Subscriber;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
-use crate::core::re_exports::opentelemetry_otlp;
 use crate::core::re_exports::tracing_opentelemetry;
 
 pub struct OpenTelemetrySetup {
@@ -37,21 +33,20 @@ pub struct OpenTelemetrySetup {
 impl OpenTelemetrySetup {
     pub fn opentelemetry_layer<S: Subscriber + for<'span> LookupSpan<'span>>(
         self,
-    ) -> Result<impl Layer<S>, TraceError> {
-        let provider = opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint(self.exporter_otlp_endpoint),
-            )
-            .with_trace_config(
-                trace::Config::default().with_resource(Resource::new([KeyValue {
-                    key: Key::from_static_str("service.name"),
-                    value: Value::from(self.service_name),
-                }])),
-            )
-            .install_batch(runtime::Tokio)?;
+    ) -> Result<impl Layer<S>, ExporterBuildError> {
+        let exporter = SpanExporter::builder()
+            .with_tonic()
+            .with_endpoint(self.exporter_otlp_endpoint)
+            .build()?;
+
+        let resource = Resource::builder()
+            .with_service_name(self.service_name)
+            .build();
+
+        let provider = SdkTracerProvider::builder()
+            .with_batch_exporter(exporter)
+            .with_resource(resource)
+            .build();
 
         let tracer = provider.tracer("galvyn");
 
@@ -68,7 +63,9 @@ pub struct ReceiveTracesMiddleware;
 impl SimpleGalvynMiddleware for ReceiveTracesMiddleware {
     async fn pre_handler(&mut self, request: Request) -> ControlFlow<Response, Request> {
         let context = headers_to_context(request.headers());
-        Span::current().set_parent(context);
+        if let Err(error) = Span::current().set_parent(context) {
+            warn!(%error, "Failed to set parent trace");
+        }
         ControlFlow::Continue(request)
     }
 }
