@@ -9,6 +9,7 @@ use std::future::Future;
 
 use thiserror::Error;
 
+#[cfg(feature = "rorm")]
 pub use crate::module::impls::database::DatabaseSetup;
 use crate::module::registry::ModuleDependencies;
 use crate::module::registry::Registry;

@@ -7,7 +7,6 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 #[cfg(feature = "opentelemetry")]
 use opentelemetry::trace::TraceId;
-use rorm::crud::update::UpdateBuilder;
 use schemars::schema::Schema;
 use thiserror::Error;
 use tracing::debug;
@@ -231,11 +230,15 @@ impl ResponseBody for CoreApiError {
     }
 }
 
-impl<'rf, E, M> From<UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>>
+#[cfg(feature = "rorm")]
+impl<'rf, E, M>
+    From<rorm::crud::update::UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>>
     for CoreApiError
 {
     #[track_caller]
-    fn from(_value: UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>) -> Self {
+    fn from(
+        _value: rorm::crud::update::UpdateBuilder<'rf, E, M, rorm::crud::update::columns::Empty>,
+    ) -> Self {
         Self::bad_request("Nothing to update")
     }
 }
@@ -254,6 +257,8 @@ impl<E: IntoServerError> From<E> for CoreApiError {
         }
     }
 }
+#[cfg(feature = "rorm")]
 impl IntoServerError for rorm::Error {}
+#[cfg(feature = "sessions")]
 impl IntoServerError for tower_sessions::session::Error {}
 impl IntoServerError for anyhow::Error {}

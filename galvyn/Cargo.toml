@@ -11,10 +11,10 @@ description = "Core-component for the galvyn web-framework"
 axum = { workspace = true, features = ["tokio", "http1"] }
 
 # Core
-galvyn-core = { version = "~0.2", path = "../galvyn-core" }
+galvyn-core = { version = "~0.2", path = "../galvyn-core", default-features = false }
 
 # Database
-rorm = { workspace = true }
+rorm = { workspace = true, optional = true }
 
 # Contrib modules
 galvyn-contrib-auth = { version = "~0.2", path = "../contrib/galvyn-contrib-auth", optional = true }
@@ -39,7 +39,7 @@ reqwest = { version = "~0.12", default-features = false, features = ["rustls-tls
 
 galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
 openapiv3 = { version = "~2", optional = true }
-serde_json = { version = "~1", optional = true }
+serde_json = { version = "~1" }
 
 # Unix signal handling
 signal-hook = { version = "~0.3", optional = true }
@@ -54,9 +54,11 @@ default = [
     "axum-default",
     "openapi",
     "opentelemetry",
+    "sessions",
     "graceful-shutdown",
     "schemars/url",
 ]
+
 # Includes all contrib crates
 contrib = [
     "contrib-auth",
@@ -64,12 +66,17 @@ contrib = [
     "contrib-settings",
     "contrib-timers",
 ]
+
 openapi = [
     "dep:openapiv3",
-    "serde_json"
 ]
+
 opentelemetry = [
-    "galvyn-core/opentelemetry"
+    "galvyn-core/opentelemetry",
+]
+
+sessions = [
+    "galvyn-core/sessions",
 ]
 
 # Enables a graceful shutdown upon receiving a termination signal
@@ -99,6 +106,7 @@ rorm-default = [
     "rorm-url",
     "rorm-schemars",
     "rorm-cli",
+    "rorm",
 ]
 
 # Enables postgres specific features, disabling the other databases
@@ -136,6 +144,12 @@ rorm-rustls = ["rorm/rustls"]
 
 # Enables connecting to the database over tls support using native-tls
 rorm-native-tls = ["rorm/native-tls"]
+
+# Enables rorm in general
+rorm = [
+    "galvyn-core/rorm",
+    "dep:rorm",
+]
 
 # ------------- #
 # Axum features #

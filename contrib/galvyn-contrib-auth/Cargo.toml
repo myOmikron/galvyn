@@ -7,7 +7,7 @@ description = "Authentication methods for galvyn"
 
 [dependencies]
 # Core component
-galvyn-core = { version = "*", path = "../../galvyn-core" }
+galvyn-core = { version = "*", path = "../../galvyn-core", default-features = false, features = ["rorm", "sessions"] }
 galvyn-macros = { version = "*", path = "../../galvyn-macros" }
 
 schemars = { version = "~0.8" }

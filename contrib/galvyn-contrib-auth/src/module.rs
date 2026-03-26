@@ -4,6 +4,7 @@ use std::future::Future;
 use std::io;
 use std::path::PathBuf;
 
+use galvyn_core::re_exports::rorm::Database;
 use galvyn_core::GalvynRouter;
 use galvyn_core::InitError;
 use galvyn_core::Module;
@@ -17,7 +18,6 @@ use openidconnect::reqwest::async_http_client;
 use openidconnect::ClientId;
 use openidconnect::ClientSecret;
 use openidconnect::IssuerUrl;
-use rorm::Database;
 use serde::Deserialize;
 use serde::Serialize;
 use webauthn_rs::prelude::AttestationCaList;

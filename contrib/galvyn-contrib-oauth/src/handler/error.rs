@@ -8,6 +8,7 @@ use galvyn_core::re_exports::axum::response::IntoResponse;
 use galvyn_core::re_exports::axum::response::Redirect;
 use galvyn_core::re_exports::axum::response::Response;
 use galvyn_core::re_exports::mime::Mime;
+use galvyn_core::re_exports::rorm;
 use galvyn_core::stuff::api_error::core::CoreApiError;
 use galvyn_core::stuff::api_json::ApiJson;
 use schemars::schema::Schema;

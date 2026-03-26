@@ -7,7 +7,6 @@ use std::sync::RwLock;
 
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
-use galvyn_core::session;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
@@ -40,6 +39,7 @@ pub struct GalvynSetup {
     /// Disables galvyn's session layer
     ///
     /// If you want to bring your own.
+    #[cfg(feature = "sessions")]
     pub disable_sessions: bool,
 
     /// Disables galvyn's [panic hook](crate::panic_hook).
@@ -157,9 +157,12 @@ impl RouterBuilder {
 
     /// Starts the webserver
     pub async fn start(&mut self, socket_addr: SocketAddr) -> Result<(), GalvynError> {
+        #[allow(unused_mut, reason = "Usage is behind feature flags")]
         let (mut router, routes) = mem::take(&mut self.routes).finish();
+
+        #[cfg(feature = "sessions")]
         if !self.setup.disable_sessions {
-            router = router.layer(session::layer());
+            router = router.layer(galvyn_core::session::layer());
         }
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();

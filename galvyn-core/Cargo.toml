@@ -8,14 +8,28 @@ description = "Core concepts for galvyn like trait definitions"
 
 [features]
 default = [
-    "opentelemetry"
+    "rorm",
+    "opentelemetry",
+    "sessions",
 ]
 
+# Re-exports rorm and implements various traits to integrate rorm
+rorm = [
+    "dep:rorm"
+]
+
+# Re-exports opentelemetry and includes the trace_id in error responses
 opentelemetry = [
     "dep:tracing-opentelemetry",
     "dep:opentelemetry",
     "dep:opentelemetry_sdk",
     "dep:opentelemetry-otlp",
+]
+
+# Implements cookie-based persistent sessions
+sessions = [
+    "rorm",
+    "dep:tower-sessions",
 ]
 
 [dependencies]
@@ -30,13 +44,13 @@ tower = { version = "~0.5" }
 regex = { version = "~1" }
 thiserror = "~2"
 anyhow = { version = "~1" }
-rorm = { workspace = true, features = ["time"] }
+rorm = { workspace = true, features = ["time"], optional = true }
 uuid = { version = "~1", features = ["v4", "serde"] }
-time = { version = "~0.3" }
+time = { version = "~0.3", features = ["serde", "formatting", "parsing", "macros"] }
 
 
 # TODO: maybe roll our own?
-tower-sessions = { version = "~0.14" }
+tower-sessions = { version = "~0.14", optional = true }
 # required by tower-sessions
 async-trait = { version = "~0.1" }
 base64 = { version = "~0.22" }
@@ -65,7 +79,7 @@ opentelemetry-otlp = { workspace = true, optional = true }
 # ----- #
 
 # Runtime
-tokio = { workspace = true, default-features = false }
+tokio = { workspace = true, default-features = false, features = ["rt"] }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }

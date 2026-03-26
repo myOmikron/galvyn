@@ -1,8 +1,8 @@
+use galvyn_core::re_exports::rorm::Model;
+use galvyn_core::re_exports::rorm::fields::types::Json;
+use galvyn_core::re_exports::rorm::fields::types::MaxStr;
 use galvyn_core::re_exports::schemars::_serde_json::value::RawValue;
 use galvyn_core::re_exports::uuid::Uuid;
-use rorm::Model;
-use rorm::fields::types::Json;
-use rorm::fields::types::MaxStr;
 
 #[derive(Model)]
 pub struct GalvynSettings {

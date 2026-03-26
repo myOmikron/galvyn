@@ -1,6 +1,6 @@
+use galvyn_core::re_exports::rorm::Model;
+use galvyn_core::re_exports::rorm::fields::types::MaxStr;
 use galvyn_core::re_exports::uuid::Uuid;
-use rorm::Model;
-use rorm::fields::types::MaxStr;
 
 /// A registered application which may perform oauth requests
 #[derive(Model)]

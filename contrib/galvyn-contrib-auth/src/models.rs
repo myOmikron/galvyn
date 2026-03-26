@@ -1,6 +1,6 @@
-use rorm::fields::types::Json;
-use rorm::prelude::ForeignModel;
-use rorm::Model;
+use galvyn_core::re_exports::rorm::fields::types::Json;
+use galvyn_core::re_exports::rorm::prelude::ForeignModel;
+use galvyn_core::re_exports::rorm::Model;
 use serde::Deserialize;
 use serde::Serialize;
 use webauthn_rs::prelude::AttestedPasskey;

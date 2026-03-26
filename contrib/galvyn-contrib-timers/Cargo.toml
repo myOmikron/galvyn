@@ -5,8 +5,7 @@ edition = "2024"
 license = "MPL-2.0"
 
 [dependencies]
-galvyn-core = { version = "*", path = "../../galvyn-core" }
-rorm = { workspace = true }
+galvyn-core = { version = "*", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
 thiserror = { version = "~2" }
 tokio = { workspace = true, features = ["time"] }
 thunderdome = { version = "~0.6" } # TODO: write our own?

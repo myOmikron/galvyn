@@ -1,6 +1,7 @@
 pub mod contrib;
 
-/// Re-export of [`rorm`](galvyn_core::re_exports::rorm)
+/// Re-export of [`rorm`](::rorm)
+#[cfg(feature = "rorm")]
 pub mod rorm {
     pub use galvyn_core::re_exports::rorm::*;
     /// Re-export from [`rorm`](galvyn_core::re_exports::rorm::DbEnum)

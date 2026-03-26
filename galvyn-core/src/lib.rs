@@ -12,6 +12,7 @@ pub mod re_exports {
     pub use opentelemetry_otlp;
     #[cfg(feature = "opentelemetry")]
     pub use opentelemetry_sdk;
+    #[cfg(feature = "rorm")]
     pub use rorm;
     pub use schemars;
     pub use serde;
@@ -31,6 +32,7 @@ pub mod module;
 pub mod router;
 pub mod schema_generator;
 mod schemaless_json;
+#[cfg(feature = "sessions")]
 pub mod session;
 pub mod stuff;
 mod util_macros;
