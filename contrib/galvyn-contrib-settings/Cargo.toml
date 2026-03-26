@@ -3,6 +3,7 @@ name = "galvyn-contrib-settings"
 version = "0.3.0"
 edition = "2024"
 license = "MPL-2.0"
+description = "Dynamic settings for galvyn"
 
 [package.metadata.docs.rs]
 features = ["rorm/postgres-only", ]
