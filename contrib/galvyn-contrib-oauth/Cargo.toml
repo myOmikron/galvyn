@@ -11,7 +11,7 @@ features = ["rorm/postgres-only", ]
 galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
 galvyn-macros = { version = "~0.3", path = "../../galvyn-macros" }
 
-rorm = { workspace = true }
+rorm = { workspace = true, features = ["uuid"] }
 
 tracing = { version = "~0.1" }
 

@@ -9,6 +9,6 @@ features = ["rorm/postgres-only", ]
 
 [dependencies]
 galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
-rorm = { workspace = true }
+rorm = { workspace = true, features = ["uuid"] }
 thiserror = { version = "~2" }
 tokio = { workspace = true, features = ["sync"] }
