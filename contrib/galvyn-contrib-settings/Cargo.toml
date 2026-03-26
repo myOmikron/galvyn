@@ -1,11 +1,14 @@
 [package]
 name = "galvyn-contrib-settings"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MPL-2.0"
 
+[package.metadata.docs.rs]
+features = ["rorm/postgres-only", ]
+
 [dependencies]
-galvyn-core = { version = "*", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
+galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
 rorm = { workspace = true }
 thiserror = { version = "~2" }
 tokio = { workspace = true, features = ["sync"] }

@@ -1,6 +1,6 @@
 [package]
 name = "galvyn"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 license = "MPL-2.0"
@@ -11,16 +11,16 @@ description = "Core-component for the galvyn web-framework"
 axum = { workspace = true, features = ["tokio", "http1"] }
 
 # Core
-galvyn-core = { version = "~0.2", path = "../galvyn-core", default-features = false }
+galvyn-core = { version = "~0.3", path = "../galvyn-core", default-features = false }
 
 # Database
 rorm = { workspace = true, optional = true }
 
 # Contrib modules
-galvyn-contrib-auth = { version = "~0.2", path = "../contrib/galvyn-contrib-auth", optional = true }
-galvyn-contrib-oauth = { version = "~0.2", path = "../contrib/galvyn-contrib-oauth", optional = true }
-galvyn-contrib-settings = { version = "~0.2", path = "../contrib/galvyn-contrib-settings", optional = true }
-galvyn-contrib-timers = { version = "~0.1", path = "../contrib/galvyn-contrib-timers", optional = true }
+galvyn-contrib-auth = { version = "~0.3", path = "../contrib/galvyn-contrib-auth", optional = true }
+galvyn-contrib-oauth = { version = "~0.3", path = "../contrib/galvyn-contrib-oauth", optional = true }
+galvyn-contrib-settings = { version = "~0.3", path = "../contrib/galvyn-contrib-settings", optional = true }
+galvyn-contrib-timers = { version = "~0.3", path = "../contrib/galvyn-contrib-timers", optional = true }
 
 # Error handling
 thiserror = { version = "~2" }
@@ -37,7 +37,7 @@ tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 
 reqwest = { version = "~0.12", default-features = false, features = ["rustls-tls"] }
 
-galvyn-macros = { version = "0.2.0", path = "../galvyn-macros" }
+galvyn-macros = { version = "~0.3", path = "../galvyn-macros" }
 openapiv3 = { version = "~2", optional = true }
 serde_json = { version = "~1" }
 

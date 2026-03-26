@@ -1,14 +1,17 @@
 [package]
 name = "galvyn-contrib-auth"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MPL-2.0"
 description = "Authentication methods for galvyn"
 
+[package.metadata.docs.rs]
+features = ["rorm/postgres-only", ]
+
 [dependencies]
 # Core component
-galvyn-core = { version = "*", path = "../../galvyn-core", default-features = false, features = ["rorm", "sessions"] }
-galvyn-macros = { version = "*", path = "../../galvyn-macros" }
+galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm", "sessions"] }
+galvyn-macros = { version = "~0.3", path = "../../galvyn-macros" }
 
 schemars = { version = "~0.8" }
 
