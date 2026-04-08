@@ -9,6 +9,7 @@ use galvyn_core::router::GalvynRoute;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
 use tracing::debug;
+use tracing::error;
 use tracing::info;
 use tracing::Level;
 use tracing_subscriber::layer::SubscriberExt;
@@ -197,18 +198,20 @@ impl RouterBuilder {
             });
         }
 
-        let socket = TcpListener::bind(socket_addr).await?;
         info!("Starting to serve webserver on http://{socket_addr}");
-        let io_result = axum::serve(socket, router)
-            .with_graceful_shutdown(async move {
-                let _blocker = shutdown.block();
-                shutdown.wait_for_started().await;
-            })
-            .await;
-        shutdown.start();
+        let socket = TcpListener::bind(socket_addr).await?;
+        let serve = axum::serve(socket, router).with_graceful_shutdown(shutdown.wait_for_started());
+        {
+            let _blocker = shutdown.block();
+            if serve.await.is_err() {
+                // Axum said they would never error.
+                // They would only return (with ok) when the graceful shutdown finished.
+                error!("Unreachable, this is a bug in galvyn");
+            }
+        }
 
         shutdown.wait_for_done().await;
-        Ok(io_result?)
+        Ok(())
     }
 }
 
