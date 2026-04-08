@@ -16,7 +16,7 @@ members = [
 axum = { version = "~0.8", default-features = false }
 rorm = { version = "~0.9", default-features = false }
 rorm-macro-impl = { version = "~0.10" }
-tokio = { version = ">=1.44.2", default-features = false }
+tokio = { version = ">=1.47.0", default-features = false } # Version required for SetOnce
 schemars = { version = "~0.8", default-features = false }
 
 # Opentelemtry

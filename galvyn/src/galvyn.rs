@@ -1,15 +1,13 @@
-use std::convert::Infallible;
 use std::mem;
 use std::net::SocketAddr;
 use std::sync::OnceLock;
-use std::sync::PoisonError;
-use std::sync::RwLock;
 
+use galvyn_core::modules::shutdown::Shutdown;
+use galvyn_core::modules::shutdown::ShutdownSetup;
 use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
 use tracing::debug;
 use tracing::info;
 use tracing::Level;
@@ -27,7 +25,6 @@ use crate::panic_hook::set_panic_hook;
 #[non_exhaustive]
 pub struct Galvyn {
     routes: Vec<GalvynRoute>,
-    shutdown: RwLock<Option<oneshot::Sender<Infallible>>>,
 }
 
 /// General setup options for galvyn.
@@ -48,6 +45,9 @@ pub struct GalvynSetup {
     /// and emits `error!` events instead of printing to stderr when a panic is raised.
     /// (Whether the panic is caught or not does not matter.)
     pub disable_panic_hook: bool,
+
+    /// Setup how the server should behave on shutdown
+    pub shutdown: ShutdownSetup,
 
     #[doc(hidden)]
     pub _non_exhaustive: (),
@@ -86,11 +86,28 @@ impl Galvyn {
 
     /// Attempts to shut down the server gracefully
     pub fn shutdown(&self) {
-        let mut shutdown_tx = self
-            .shutdown
-            .write()
-            .unwrap_or_else(PoisonError::into_inner);
-        shutdown_tx.take();
+        Shutdown::global().start();
+    }
+
+    /// Waits until the server started a graceful shutdown
+    ///
+    /// This method can be used by tasks to terminate themselves.
+    pub async fn shutdown_started(&self) {
+        Shutdown::global().wait_for_started().await;
+    }
+
+    /// Constructs a guard which has to be dropped before a graceful shutdown can complete
+    ///
+    /// This has no effect on a forced shutdown.
+    pub fn block_shutdown(&self) -> impl Drop + Send + Sync + 'static {
+        Shutdown::global().block()
+    }
+
+    /// Force the server to stop
+    ///
+    /// This will cause the `start` method to return immediately.
+    pub fn kill(&self) {
+        Shutdown::global().force_done();
     }
 }
 
@@ -101,7 +118,7 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    fn new(setup: GalvynSetup) -> ModuleBuilder {
+    fn new(mut setup: GalvynSetup) -> ModuleBuilder {
         if !setup.disable_panic_hook {
             set_panic_hook();
         }
@@ -116,10 +133,9 @@ impl ModuleBuilder {
             debug!("Using external subscriber");
         }
 
-        ModuleBuilder {
-            modules: Default::default(),
-            setup,
-        }
+        let mut modules = RegistryBuilder::new();
+        modules.register_module::<Shutdown>(mem::take(&mut setup.shutdown));
+        ModuleBuilder { modules, setup }
     }
 
     /// Register a module
@@ -165,37 +181,34 @@ impl RouterBuilder {
             router = router.layer(galvyn_core::session::layer());
         }
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-
         INSTANCE.set(Galvyn {
             routes,
-            shutdown: RwLock::new(Some(shutdown_tx)),
         })
             .unwrap_or_else(|_| panic!("Galvyn has already been started. There can't be more than one instance per process."));
-
-        let socket = TcpListener::bind(socket_addr).await?;
-
-        info!("Starting to serve webserver on http://{socket_addr}");
-        let serve_future = axum::serve(socket, router);
+        let shutdown = Shutdown::global();
 
         #[cfg(feature = "graceful-shutdown")]
-        let signal = {
+        {
             debug!("Registering signals for graceful shutdown");
-            crate::graceful_shutdown::wait_for_signal()?
-        };
-        #[cfg(not(feature = "graceful-shutdown"))]
-        let signal = std::future::pending::<()>();
+            let signal = crate::graceful_shutdown::wait_for_signal()?;
+            tokio::spawn(async move {
+                signal.await;
+                shutdown.start();
+            });
+        }
 
-        serve_future
+        let socket = TcpListener::bind(socket_addr).await?;
+        info!("Starting to serve webserver on http://{socket_addr}");
+        let io_result = axum::serve(socket, router)
             .with_graceful_shutdown(async move {
-                tokio::select! {
-                    _ = signal => (),
-                    _ = shutdown_rx => (),
-                }
+                let _blocker = shutdown.block();
+                shutdown.wait_for_started().await;
             })
-            .await?;
+            .await;
+        shutdown.start();
 
-        Ok(())
+        shutdown.wait_for_done().await;
+        Ok(io_result?)
     }
 }
 

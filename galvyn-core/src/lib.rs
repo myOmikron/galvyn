@@ -28,6 +28,7 @@ pub mod handler;
 pub mod macro_utils;
 pub mod middleware;
 pub mod module;
+pub mod modules;
 #[doc(hidden)]
 pub mod router;
 pub mod schema_generator;

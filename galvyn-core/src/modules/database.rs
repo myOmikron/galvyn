@@ -1,3 +1,5 @@
+//! [`Module`] implementation for [`rorm::Database`]
+
 use rorm::Database;
 use rorm::DatabaseConfiguration;
 use rorm::DatabaseDriver;
@@ -8,22 +10,22 @@ use crate::InitError;
 use crate::Module;
 use crate::PreInitError;
 
-/// Config struct the [`DatabaseSetup::Default`] will deserialize from environment variables
-#[derive(Serialize, Deserialize, Debug)]
-pub struct DatabaseConfig {
-    pub postgres_db: String,
-    pub postgres_host: String,
-    pub postgres_port: u16,
-    pub postgres_user: String,
-    pub postgres_password: String,
-}
-
 /// Enum declaring how the database should be configured
 #[derive(Default, Debug)]
 pub enum DatabaseSetup {
     #[default]
     Default,
     Custom(DatabaseConfiguration),
+}
+
+/// Config struct the [`DatabaseSetup::Default`] will deserialize from environment variables
+#[derive(Serialize, Deserialize, Debug)]
+struct DatabaseConfig {
+    pub postgres_db: String,
+    pub postgres_host: String,
+    pub postgres_port: u16,
+    pub postgres_user: String,
+    pub postgres_password: String,
 }
 
 impl Module for Database {
