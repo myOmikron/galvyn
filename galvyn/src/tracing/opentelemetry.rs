@@ -59,6 +59,7 @@ impl OpenTelemetrySetup {
 
 /// Checks incoming requests for opentelemetry headers and set the appropriate parent span.
 #[derive(Copy, Clone, Debug, Default)]
+#[deprecated(note = "This entire API has to be re-designed, because dependency changed its API.")]
 pub struct ReceiveTracesMiddleware;
 impl SimpleGalvynMiddleware for ReceiveTracesMiddleware {
     async fn pre_handler(&mut self, request: Request) -> ControlFlow<Response, Request> {
