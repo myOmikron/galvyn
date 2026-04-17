@@ -22,7 +22,7 @@ pub struct Registry {
 
 trait DynModule: Any + Send + Sync + 'static {
     #[doc(hidden)]
-    fn post_init(&'static self) -> JoinHandle<Result<(), module::PostInitError>>;
+    fn post_init(&'static self) -> (&'static str, JoinHandle<Result<(), module::PostInitError>>);
 }
 
 impl Registry {

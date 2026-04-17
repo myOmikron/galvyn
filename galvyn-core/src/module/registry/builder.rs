@@ -5,7 +5,6 @@ use std::fmt;
 
 use futures_concurrency::future::Join;
 use futures_lite::future;
-use tokio::task::JoinError;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 use tracing::debug;
@@ -58,52 +57,55 @@ impl RegistryBuilder {
             self.modules.push((
                 TypeId::of::<T>(),
                 BoxDynFnOnce::new(move |()| {
-                    tokio::spawn(async {
-                        let pre_init = async move {
-                            let result = T::pre_init(setup).await;
-                            match &result {
-                                Ok(_) => trace!("Finished pre init"),
-                                Err(_) => trace!("Failed pre init"),
+                    (
+                        type_name::<T>(),
+                        tokio::spawn(async {
+                            let pre_init = async move {
+                                let result = T::pre_init(setup).await;
+                                match &result {
+                                    Ok(_) => trace!("Finished pre init"),
+                                    Err(_) => trace!("Failed pre init"),
+                                }
+                                result
                             }
-                            result
-                        }
-                        .instrument(trace_span!(
-                            "Module::pre_init",
-                            module.name = type_name::<T>()
-                        ))
-                        .await?;
+                            .instrument(trace_span!(
+                                "Module::pre_init",
+                                module.name = type_name::<T>()
+                            ))
+                            .await?;
 
-                        Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
-                            Box::pin(async move {
-                                let mut dependencies =
-                                    <T::Dependencies as ModuleDependencies>::take(&mut modules);
+                            Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
+                                Box::pin(async move {
+                                    let mut dependencies =
+                                        <T::Dependencies as ModuleDependencies>::take(&mut modules);
 
-                                let t = {
-                                    let dependencies = &mut dependencies;
-                                    async move {
-                                        let result = T::init(pre_init, dependencies).await;
-                                        match &result {
-                                            Ok(_) => trace!("Finished init"),
-                                            Err(_) => trace!("Failed init"),
+                                    let t = {
+                                        let dependencies = &mut dependencies;
+                                        async move {
+                                            let result = T::init(pre_init, dependencies).await;
+                                            match &result {
+                                                Ok(_) => trace!("Finished init"),
+                                                Err(_) => trace!("Failed init"),
+                                            }
+                                            result.map_err(|x| (type_name::<T>(), x))
                                         }
-                                        result
-                                    }
-                                    .instrument(trace_span!(
-                                        "Module::init",
-                                        module.name = type_name::<T>()
-                                    ))
-                                    .await?
-                                };
+                                        .instrument(trace_span!(
+                                            "Module::init",
+                                            module.name = type_name::<T>()
+                                        ))
+                                        .await?
+                                    };
 
-                                <T::Dependencies as ModuleDependencies>::put_back(
-                                    dependencies,
-                                    &mut modules,
-                                );
-                                modules.insert(t);
-                                Ok(modules)
-                            }) as future::Boxed<_>
-                        }))
-                    })
+                                    <T::Dependencies as ModuleDependencies>::put_back(
+                                        dependencies,
+                                        &mut modules,
+                                    );
+                                    modules.insert(t);
+                                    Ok(modules)
+                                }) as future::Boxed<_>
+                            }))
+                        }),
+                    )
                 }) as UninitModule,
             ));
             debug!(module.name = type_name::<T>(), "Registered module");
@@ -116,15 +118,10 @@ impl RegistryBuilder {
     /// and makes the registry available through [`Registry::global`].
     #[instrument(level = "trace", name = "RegistryBuilder::init", skip(self))]
     pub async fn init(&mut self) -> Result<(), InitError> {
-        let pre_init_modules = process_join_results(
-            self.modules
-                .drain(..)
-                .map(|(_, x)| x.call(()))
-                .collect::<Vec<_>>()
-                .join()
-                .await,
-        )
-        .map_err(InitError::PreInit)?;
+        let pre_init_modules =
+            process_join_handles(self.modules.drain(..).map(|(_, x)| x.call(())))
+                .await
+                .map_err(InitError::PreInit)?;
 
         let mut modules = OwnedModulesSet::new();
         for pre_init_module in pre_init_modules {
@@ -149,15 +146,13 @@ impl RegistryBuilder {
                 .unwrap_or_else(|| unreachable!("The OnceLock has just been set"))
         };
 
-        process_join_results(
+        process_join_handles(
             registry
                 .modules
                 .iter()
-                .map(|init_module| init_module.post_init())
-                .collect::<Vec<_>>()
-                .join()
-                .await,
+                .map(|init_module| init_module.post_init()),
         )
+        .await
         .map_err(InitError::PostInit)?;
 
         Ok(())
@@ -166,9 +161,9 @@ impl RegistryBuilder {
 
 #[derive(Debug)]
 pub enum InitError {
-    PreInit(Vec<module::PreInitError>),
-    Init(module::InitError),
-    PostInit(Vec<module::PostInitError>),
+    PreInit(Vec<(&'static str, module::PreInitError)>),
+    Init((&'static str, module::InitError)),
+    PostInit(Vec<(&'static str, module::PostInitError)>),
 }
 
 impl fmt::Display for InitError {
@@ -178,13 +173,16 @@ impl fmt::Display for InitError {
             InitError::Init(_) => "",
             InitError::PostInit(_) => "post-",
         };
-        let (first, rest) = match self {
+        let ((module, error), rest) = match self {
             InitError::PreInit(errors) => errors.split_first(),
             InitError::Init(error) => Some((error, [].as_slice())),
             InitError::PostInit(errors) => errors.split_first(),
         }
         .unwrap_or_else(|| unreachable!("Error lists should not be empty"));
-        write!(f, "Error during module {phase}initialisation: {first}")?;
+        write!(
+            f,
+            "Error during module {phase}initialisation of {module}: {error}"
+        )?;
         if rest.is_empty() {
             write!(f, " (and {} more...)", rest.len())?;
         }
@@ -194,27 +192,38 @@ impl fmt::Display for InitError {
 impl Error for InitError {}
 
 /// An uninitialised module waiting to be pre-initialised
-type UninitModule = BoxDynFnOnce<(), JoinHandle<Result<PreInitModule, module::PreInitError>>>;
+type UninitModule = BoxDynFnOnce<
+    (),
+    (
+        &'static str,
+        JoinHandle<Result<PreInitModule, module::PreInitError>>,
+    ),
+>;
 
 /// A pre-initialised modules waiting to be initialised
-type PreInitModule =
-    BoxDynFnOnce<OwnedModulesSet, future::Boxed<Result<OwnedModulesSet, module::InitError>>>;
+type PreInitModule = BoxDynFnOnce<
+    OwnedModulesSet,
+    future::Boxed<Result<OwnedModulesSet, (&'static str, module::InitError)>>,
+>;
 
 impl<M: Module> DynModule for M {
-    fn post_init(&'static self) -> JoinHandle<Result<(), module::PostInitError>> {
-        tokio::spawn(
-            async move {
-                let result = Module::post_init(self).await;
-                match &result {
-                    Ok(_) => trace!("Finished post init"),
-                    Err(_) => trace!("Failed post init"),
+    fn post_init(&'static self) -> (&'static str, JoinHandle<Result<(), module::PostInitError>>) {
+        (
+            type_name::<Self>(),
+            tokio::spawn(
+                async move {
+                    let result = Module::post_init(self).await;
+                    match &result {
+                        Ok(_) => trace!("Finished post init"),
+                        Err(_) => trace!("Failed post init"),
+                    }
+                    result
                 }
-                result
-            }
-            .instrument(trace_span!(
-                "Module::post_init",
-                module.name = type_name::<Self>()
-            )),
+                .instrument(trace_span!(
+                    "Module::post_init",
+                    module.name = type_name::<Self>()
+                )),
+            ),
         )
     }
 }
@@ -239,12 +248,15 @@ impl<Arg: 'static, Ret: 'static> BoxDynFnOnce<Arg, Ret> {
     }
 }
 
-fn process_join_results<T, E: From<String>>(
-    vec: Vec<Result<Result<T, E>, JoinError>>,
-) -> Result<Vec<T>, Vec<E>> {
+async fn process_join_handles<T, E: From<String>>(
+    iter: impl Iterator<Item = (&'static str, JoinHandle<Result<T, E>>)>,
+) -> Result<Vec<T>, Vec<(&'static str, E)>> {
+    let (names, handles) = iter.unzip::<_, _, Vec<_>, Vec<_>>();
+    let results = handles.join().await;
+
     let mut ts = Vec::new();
     let mut errors = Vec::new();
-    for join_result in vec {
+    for (module_name, join_result) in names.into_iter().zip(results) {
         let result = join_result.unwrap_or_else(|join_error| {
             Err(E::from(
                 join_error
@@ -267,7 +279,7 @@ fn process_join_results<T, E: From<String>>(
 
         match result {
             Ok(t) => ts.push(t),
-            Err(error) => errors.push(error),
+            Err(error) => errors.push((module_name, error)),
         }
     }
 
