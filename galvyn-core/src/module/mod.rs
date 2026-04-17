@@ -50,7 +50,7 @@ pub mod registry;
 ///
 /// Modules which others depend on have been made aware of their dependents and may run some finishing initialization code.
 pub trait Module: Sized + Send + Sync + 'static {
-    /// A type which is constructed by an application author to declare how this module should configure itself.
+    /// A type that is constructed by an application author to declare how this module should configure itself.
     ///
     /// This type should be constructed in a semi-constant fashion by the application author.
     /// It should not be constructed from configuration
@@ -68,7 +68,7 @@ pub trait Module: Sized + Send + Sync + 'static {
     /// If your module doesn't need any `pre_init` logic then `()` would be a good default.
     type PreInit: Sized + Send + Sync + 'static;
 
-    /// Pre initialization run concurrently with all other modules'
+    /// Pre-initialization run concurrently with all other modules'
     ///
     /// (see [Module Pre Init](Module#pre_init))
     ///
@@ -77,7 +77,7 @@ pub trait Module: Sized + Send + Sync + 'static {
         setup: Self::Setup,
     ) -> impl Future<Output = Result<Self::PreInit, PreInitError>> + Send;
 
-    /// A tuple of [`Module`]s which need to be initialized before this one.
+    /// A tuple of [`Module`]s that need to be initialized before this one.
     type Dependencies: ModuleDependencies;
 
     /// The main initialization of the module
@@ -88,7 +88,7 @@ pub trait Module: Sized + Send + Sync + 'static {
         dependencies: &mut Self::Dependencies,
     ) -> impl Future<Output = Result<Self, InitError>> + Send;
 
-    /// Post initialization run concurrently with all other modules'
+    /// Post-initialization run concurrently with all other modules'
     ///
     /// (see [Module Post Init](Module#post_init))
     fn post_init(&'static self) -> impl Future<Output = Result<(), PostInitError>> + Send {
@@ -98,10 +98,11 @@ pub trait Module: Sized + Send + Sync + 'static {
     /// Gets the module's global instance
     ///
     /// This method should be used after every modules' `init` ran.
-    /// I.e. in a module's `post_init` or the applications operation after that.
+    /// I.e. in a module's `post_init` or the application's operation after that.
     ///
     /// # Panics
-    /// If the module has not been initialized yet.
+    /// If any module has not been initialized yet
+    /// or if this module has not been registered.
     #[track_caller]
     fn global() -> &'static Self {
         match Self::try_global() {
@@ -113,7 +114,8 @@ pub trait Module: Sized + Send + Sync + 'static {
     /// Gets the module's global instance
     ///
     /// # Errors
-    /// If the module has not been initialized yet.
+    /// If any module has not been initialized yet
+    /// or if this module has not been registered.
     fn try_global() -> Result<&'static Self, TryGlobalError> {
         Registry::try_global()
             .ok_or(TryGlobalError::Registry)?
@@ -121,6 +123,30 @@ pub trait Module: Sized + Send + Sync + 'static {
             .ok_or_else(|| TryGlobalError::Module {
                 module_type: type_name::<Self>(),
             })
+    }
+
+    /// Waits for all modules to initialize and retrieves `Self`'s global instance
+    ///
+    /// # Panics
+    /// If the module has not been registered yet.
+    fn global_wait() -> impl Future<Output = &'static Self> + Send + 'static {
+        async {
+            match Self::try_global_wait().await {
+                Some(x) => x,
+                None => panic!(
+                    "the module '{}' has not been registered",
+                    type_name::<Self>()
+                ),
+            }
+        }
+    }
+
+    /// Waits for all modules to initialize and retrieves `Self`'s global instance
+    ///
+    /// # `None`
+    /// If the module has not been registered.
+    fn try_global_wait() -> impl Future<Output = Option<&'static Self>> + Send + 'static {
+        async { Registry::global_wait().await.try_get() }
     }
 }
 

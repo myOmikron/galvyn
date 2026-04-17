@@ -82,7 +82,7 @@ opentelemetry-otlp = { workspace = true, optional = true }
 # ----- #
 
 # Runtime
-tokio = { workspace = true, default-features = false, features = ["rt"] }
+tokio = { workspace = true, default-features = false, features = ["rt", "sync"] }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }

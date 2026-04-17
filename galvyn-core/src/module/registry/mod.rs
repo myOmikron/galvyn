@@ -1,6 +1,6 @@
 use std::any::Any;
-use std::sync::OnceLock;
 
+use tokio::sync::SetOnce;
 use tokio::task::JoinHandle;
 
 pub use self::dependencies::ModuleDependencies;
@@ -38,6 +38,10 @@ impl Registry {
         global
     }
 
+    pub async fn global_wait() -> &'static Self {
+        Self::raw_global().wait().await
+    }
+
     pub fn try_global() -> Option<&'static Self> {
         Self::raw_global().get()
     }
@@ -46,8 +50,8 @@ impl Registry {
         self.modules.get()
     }
 
-    fn raw_global() -> &'static OnceLock<Self> {
-        static GLOBAL: OnceLock<Registry> = OnceLock::new();
+    fn raw_global() -> &'static SetOnce<Self> {
+        static GLOBAL: SetOnce<Registry> = SetOnce::const_new();
         &GLOBAL
     }
 }

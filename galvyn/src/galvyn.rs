@@ -1,6 +1,5 @@
 use std::mem;
 use std::net::SocketAddr;
-use std::sync::OnceLock;
 
 use galvyn_core::modules::shutdown::Shutdown;
 use galvyn_core::modules::shutdown::ShutdownSetup;
@@ -8,6 +7,7 @@ use galvyn_core::registry::builder::RegistryBuilder;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
+use tokio::sync::SetOnce;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -67,6 +67,8 @@ impl Galvyn {
     ///
     /// # Panics
     /// If galvyn has not been started yet.
+    ///
+    /// If you want to wait until it has started, use [`Galvyn::started`].
     pub fn global() -> &'static Self {
         Self::try_global().unwrap_or_else(|| panic!("Galvyn has not been started yet."))
     }
@@ -75,8 +77,17 @@ impl Galvyn {
     ///
     /// # None
     /// If galvyn has not been started yet.
+    ///
+    /// If you want to wait until it has started, use [`Galvyn::started`].
     pub fn try_global() -> Option<&'static Self> {
         INSTANCE.get()
+    }
+
+    /// Waits for `Galvyn` to start and returns its global instance
+    ///
+    /// If you can't use `async` and know the server has started, use [`Galvyn::global`] or [`Galvyn::try_global`].
+    pub async fn global_wait() -> &'static Self {
+        INSTANCE.wait().await
     }
 
     /// Quick and dirty solution to expose the registered handlers after startup
@@ -106,12 +117,18 @@ impl Galvyn {
 
     /// Force the server to stop
     ///
-    /// This will cause the `start` method to return immediately.
+    /// This will cause the [`start`](RouterBuilder::start) method to return immediately.
     pub fn kill(&self) {
         Shutdown::global().force_done();
     }
 }
 
+/// Intermediate build for your [`Galvyn`] instance
+///
+/// Register all [`Module`]s you require using [`register_module`](Self::register_module)
+/// and then call finish this builder step using [`init_modules`](Self::init_modules).
+///
+/// The next step will be adding http routes. (See [`RouterBuilder`])
 #[derive(Default)]
 pub struct ModuleBuilder {
     modules: RegistryBuilder,
@@ -215,4 +232,4 @@ impl RouterBuilder {
     }
 }
 
-static INSTANCE: OnceLock<Galvyn> = OnceLock::new();
+static INSTANCE: SetOnce<Galvyn> = SetOnce::const_new();
