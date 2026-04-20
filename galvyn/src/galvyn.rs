@@ -97,6 +97,9 @@ impl Galvyn {
     }
 
     /// Attempts to shut down the server gracefully
+    ///
+    /// This method is **idempotent**.
+    /// *(Calling it a second time has no effect.)*
     pub fn shutdown(&self) {
         Shutdown::global().start();
     }
@@ -118,6 +121,9 @@ impl Galvyn {
     /// Force the server to stop
     ///
     /// This will cause the [`start`](RouterBuilder::start) method to return immediately.
+    ///
+    /// This method is **idempotent**.
+    /// *(Calling it a second time has no effect.)*
     pub fn kill(&self) {
         Shutdown::global().force_done();
     }
