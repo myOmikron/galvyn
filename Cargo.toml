@@ -13,14 +13,75 @@ members = [
 ]
 
 [workspace.dependencies]
-axum = { version = "~0.8", default-features = false }
-rorm = { version = "~0.9", default-features = false }
-rorm-macro-impl = { version = "~0.10" }
+
+# -------------- #
+# Core framework #
+# -------------- #
+
+galvyn-core = { version = "~0.4", path = "./galvyn-core", default-features = false }
+galvyn-macros = { version = "0.4", path = "./galvyn-macros" }
+
+# ----------------------- #
+# Algorithms & Data types #
+# ----------------------- #
+
+# (De)serialization framework
+serde = { version = "~1", features = ["derive"] }
+
+# JSON backend for `serde`
+serde_json = { version = "~1" }
+
+# Base64 encoding & decoding
+base64 = { version = "~0.22" }
+
+# URL parsing following RFC 3986
+url = { version = "~2" }
+
+# ----- #
+# Async #
+# ----- #
+
+# Core async runtime and many primitives
 tokio = { version = ">=1.47.0", default-features = false } # Version required for SetOnce
+
+# ---- #
+# HTTP #
+# ---- #
+
+# Underlying web framework
+axum = { version = "~0.8", default-features = false }
+# Provides json-schema which are used to generate the openapi definitions
 schemars = { version = "~0.8", default-features = false }
 
-# Opentelemtry
+# HTTP client
+reqwest = { version = "~0.13", default-features = false, features = ["rustls"] }
+
+# -------- #
+# Database #
+# -------- #
+
+rorm = { version = "~0.9", default-features = false }
+rorm-macro-impl = { version = "~0.10" }
+
+# ------------- #
+# Observability #
+# ------------- #
+
+# Facade (interface) to create spans and log messages
+tracing = { version = "~0.1" }
+
+# Opentelemetry exporting & tracing bridge
 tracing-opentelemetry = { version = "~0.32" }
 opentelemetry = { version = "~0.31" }
 opentelemetry_sdk = { version = "~0.31", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "~0.31", features = ["grpc-tonic"] }
+
+# -------------- #
+# Error handling #
+# -------------- #
+
+# Fancier `Box<dyn Error>`
+anyhow = { version = "~1" }
+
+# Derive macro for error enums
+thiserror = { version = "~2" }

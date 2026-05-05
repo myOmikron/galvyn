@@ -1,6 +1,6 @@
 [package]
 name = "galvyn-core"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 license = "MPL-2.0"
@@ -40,23 +40,23 @@ sessions = [
 axum = { workspace = true, default-features = false, features = ["query", "form", "json"] }
 bytes = { version = "~1" }
 mime = { version = "~0.3" }
-serde = { version = "~1" }
+serde = { workspace = true }
 serde_json = { version = "~1" }
 schemars = { workspace = true, features = ["uuid1", "derive"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }
-thiserror = "~2"
-anyhow = { version = "~1" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 rorm = { workspace = true, features = ["time"], optional = true }
 uuid = { version = "~1", features = ["v4", "serde"] }
 time = { version = "~0.3", features = ["serde", "formatting", "parsing", "macros"] }
 
 
 # TODO: maybe roll our own?
-tower-sessions = { version = "~0.14", optional = true }
+tower-sessions = { version = "~0.15", optional = true }
 # required by tower-sessions
 async-trait = { version = "~0.1" }
-base64 = { version = "~0.22" }
+base64 = { workspace = true }
 
 # TODO: maybe roll our own?
 envy = { version = "~0.4" }
@@ -67,7 +67,7 @@ envy = { version = "~0.4" }
 # ------- #
 
 # Core
-tracing = { version = "~0.1" }
+tracing = { workspace = true }
 
 # Opentelemetry Bridge
 tracing-opentelemetry = { workspace = true, optional = true }
@@ -82,7 +82,7 @@ opentelemetry-otlp = { workspace = true, optional = true }
 # ----- #
 
 # Runtime
-tokio = { workspace = true, default-features = false, features = ["rt", "sync"] }
+tokio = { workspace = true, features = ["rt", "sync"] }
 
 # The basic async traits (Future, Stream, AsyncRead, ...) and extensions for them
 futures-lite = { version = "~2", default-features = false, features = ["alloc"] }

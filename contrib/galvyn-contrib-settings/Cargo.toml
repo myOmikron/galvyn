@@ -1,6 +1,6 @@
 [package]
 name = "galvyn-contrib-settings"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 license = "MPL-2.0"
 description = "Dynamic settings for galvyn"
@@ -9,7 +9,7 @@ description = "Dynamic settings for galvyn"
 features = ["rorm/postgres-only", ]
 
 [dependencies]
-galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
+galvyn-core = { workspace = true, features = ["rorm"] }
 rorm = { workspace = true, features = ["uuid"] }
-thiserror = { version = "~2" }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }

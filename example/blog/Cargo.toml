@@ -13,5 +13,5 @@ galvyn = { path = "../../galvyn", version = "*", features = ["contrib", "openapi
 # async runtime
 tokio = { workspace = true, features = ["full"] }
 
-serde = { version = "1.0.214", features = ["derive"] }
-tracing = "0.1.40"
+serde = { workspace = true, features = ["derive"] }
+tracing = { workspace = true }

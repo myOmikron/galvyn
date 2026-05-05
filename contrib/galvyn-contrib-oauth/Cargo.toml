@@ -1,6 +1,6 @@
 [package]
 name = "galvyn-contrib-oauth"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 license = "MPL-2.0"
 description = "OAuth provider for galvyn"
@@ -9,17 +9,17 @@ description = "OAuth provider for galvyn"
 features = ["rorm/postgres-only", ]
 
 [dependencies]
-galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm"] }
-galvyn-macros = { version = "~0.3", path = "../../galvyn-macros" }
+galvyn-core = { workspace = true, features = ["rorm"] }
+galvyn-macros = { workspace = true }
 
 rorm = { workspace = true, features = ["uuid"] }
 
-tracing = { version = "~0.1" }
+tracing = { workspace = true }
 
 # Url builder and parser
-url = { version = "~2" }
+url = { workspace = true }
 serde_urlencoded = { version = "~0.7" }
 
 # Serialization support
-serde = { version = "~1", features = ["derive"] }
-schemars = { version = "~0.8" }
+serde = { workspace = true, features = ["derive"] }
+schemars = { workspace = true }

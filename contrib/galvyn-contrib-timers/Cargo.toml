@@ -1,11 +1,11 @@
 [package]
 name = "galvyn-contrib-timers"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 license = "MPL-2.0"
 
 [dependencies]
-galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false }
-thiserror = { version = "~2" }
+galvyn-core = { workspace = true }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 thunderdome = { version = "~0.6" } # TODO: write our own?

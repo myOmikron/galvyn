@@ -2,7 +2,6 @@ use std::any::type_name;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use galvyn::contrib::auth::AuthModule;
 use galvyn::contrib::settings::ApplicationSettings;
 use galvyn::contrib::settings::ApplicationSettingsExt;
 use galvyn::contrib::settings::SettingsStore;
@@ -13,7 +12,6 @@ use galvyn::core::stuff::api_error::ApiError;
 use galvyn::core::stuff::api_error::ApiResult;
 use galvyn::core::stuff::api_json::ApiJson;
 use galvyn::core::GalvynRouter;
-use galvyn::core::Module;
 use galvyn::get;
 use galvyn::openapi::OpenapiRouterExt;
 use galvyn::post;
@@ -59,13 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register_module::<Database>(Default::default())
         .register_module::<SettingsStore>(Default::default())
         .register_module::<<Settings as ApplicationSettingsExt>::Module>(Default::default())
-        .register_module::<AuthModule>(Default::default())
         .init_modules()
         .await?
-        .add_routes(
-            GalvynRouter::with_openapi_tag("Auth Module")
-                .nest("/auth", AuthModule::global().handler.as_router()),
-        )
         .add_routes(
             GalvynRouter::new()
                 .openapi_tag("Main")

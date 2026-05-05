@@ -1,19 +1,19 @@
 [package]
 name = "galvyn-contrib-auth"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MPL-2.0"
 description = "Authentication methods for galvyn"
 
 [package.metadata.docs.rs]
-features = ["rorm/postgres-only", ]
+features = ["rorm/postgres-only"]
 
 [dependencies]
 # Core component
-galvyn-core = { version = "~0.3", path = "../../galvyn-core", default-features = false, features = ["rorm", "sessions"] }
-galvyn-macros = { version = "~0.3", path = "../../galvyn-macros" }
+galvyn-core = { workspace = true, features = ["rorm", "sessions"] }
+galvyn-macros = { workspace = true }
 
-schemars = { version = "~0.8" }
+schemars = { workspace = true }
 
 rorm = { workspace = true }
 
@@ -32,8 +32,8 @@ totp-rs = { version = "~5" }
 webauthn-rs = { version = "~0.5", features = ["danger-allow-state-serialisation"] }
 
 # Serialization support
-serde = { version = "~1", features = ["derive"] }
-serde_json = { version = "~1" }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 full = [
