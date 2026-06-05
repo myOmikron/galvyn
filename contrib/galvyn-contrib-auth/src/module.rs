@@ -4,6 +4,7 @@ use std::future::Future;
 use std::io;
 use std::path::PathBuf;
 
+use galvyn_core::misc::serde_env;
 use galvyn_core::re_exports::rorm::Database;
 use galvyn_core::GalvynRouter;
 use galvyn_core::InitError;
@@ -76,6 +77,7 @@ impl Clone for AuthHandler {
 impl Copy for AuthHandler {}
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
 pub struct AuthConfig {
     pub oidc_issuer_url: IssuerUrl,
     pub oidc_client_id: ClientId,
@@ -114,7 +116,7 @@ impl Module for AuthModule {
     async fn pre_init(
         AuthSetup { private: () }: Self::Setup,
     ) -> Result<Self::PreInit, PreInitError> {
-        let auth_config: AuthConfig = envy::from_env()?;
+        let auth_config: AuthConfig = serde_env::from_env()?;
 
         #[cfg(not(feature = "oidc"))]
         let oidc = ();

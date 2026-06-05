@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::InitError;
 use crate::Module;
 use crate::PreInitError;
+use crate::misc::serde_env;
 
 /// Enum declaring how the database should be configured
 #[derive(Default, Debug)]
@@ -20,6 +21,7 @@ pub enum DatabaseSetup {
 
 /// Config struct the [`DatabaseSetup::Default`] will deserialize from environment variables
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "UPPERCASE")]
 struct DatabaseConfig {
     pub postgres_db: String,
     pub postgres_host: String,
@@ -42,7 +44,7 @@ impl Module for Database {
                     postgres_port,
                     postgres_user,
                     postgres_password,
-                } = envy::from_env()?;
+                } = serde_env::from_env()?;
 
                 Ok(DatabaseConfiguration::new(DatabaseDriver::Postgres {
                     name: postgres_db,

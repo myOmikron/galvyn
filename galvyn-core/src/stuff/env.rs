@@ -97,7 +97,7 @@ impl<T: DeserializeOwned> EnvVar<T> {
                     }
                 };
                 let is_empty = value.is_empty();
-                match T::deserialize(StringParseDeserializer(value)) {
+                match T::deserialize(StringParseDeserializer::new(value)) {
                     Ok(value) => Ok(value),
                     Err(error) => match self.default {
                         Some(default) if is_empty => Ok(default()),

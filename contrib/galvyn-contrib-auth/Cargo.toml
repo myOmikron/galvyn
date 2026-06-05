@@ -17,9 +17,6 @@ schemars = { workspace = true }
 
 rorm = { workspace = true }
 
-# TODO: maybe roll our own?
-envy = { version = "~0.4" }
-
 # oidc
 openidconnect = { version = "~4", features = ["accept-rfc3339-timestamps"] }
 
