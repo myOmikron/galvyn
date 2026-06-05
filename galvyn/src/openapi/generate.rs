@@ -6,6 +6,7 @@ use galvyn_core::re_exports::schemars;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::schema_generator::SchemaGenerator;
 use openapiv3::Components;
+use openapiv3::Header;
 use openapiv3::Info;
 use openapiv3::MediaType;
 pub use openapiv3::OpenAPI;
@@ -20,6 +21,7 @@ use openapiv3::Response;
 use openapiv3::Schema;
 use openapiv3::SchemaKind;
 use openapiv3::StatusCode;
+use openapiv3::Type;
 use tracing::debug;
 use tracing::warn;
 
@@ -206,7 +208,38 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
             }
         }
         for part in &route.handler.response_parts {
-            // TODO
+            for response_or_ref in operation
+                .responses
+                .default
+                .iter_mut()
+                .chain(operation.responses.responses.values_mut())
+            {
+                let response_headers = match response_or_ref {
+                    ReferenceOr::Item(response) => &mut response.headers,
+                    ReferenceOr::Reference { .. } => {
+                        // Our code should use references for responses
+                        warn!("This is a bug in galvyn");
+                        continue;
+                    }
+                };
+                for header in (part.header)() {
+                    response_headers
+                        .entry(header.to_string())
+                        .or_insert(ReferenceOr::Item(Header {
+                            format: ParameterSchemaOrContent::Schema(ReferenceOr::Item(Schema {
+                                schema_data: Default::default(),
+                                schema_kind: SchemaKind::Type(Type::String(Default::default())),
+                            })),
+                            description: Default::default(),
+                            style: Default::default(),
+                            required: Default::default(),
+                            deprecated: Default::default(),
+                            example: Default::default(),
+                            examples: Default::default(),
+                            extensions: Default::default(),
+                        }));
+                }
+            }
         }
     }
 
