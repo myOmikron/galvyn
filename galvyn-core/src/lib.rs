@@ -27,6 +27,7 @@ pub mod handler;
 #[doc(hidden)]
 pub mod macro_utils;
 pub mod middleware;
+pub mod misc;
 pub mod module;
 pub mod modules;
 #[doc(hidden)]
