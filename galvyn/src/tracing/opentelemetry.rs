@@ -1,11 +1,8 @@
-use std::ops::ControlFlow;
+use std::any::type_name;
 
-use axum::extract::Request;
 use axum::http::HeaderMap;
 use axum::http::HeaderName;
 use axum::http::HeaderValue;
-use axum::response::Response;
-use galvyn_core::middleware::SimpleGalvynMiddleware;
 use galvyn_core::re_exports::opentelemetry::propagation::Extractor;
 use galvyn_core::re_exports::opentelemetry::propagation::Injector;
 use galvyn_core::re_exports::opentelemetry::propagation::TextMapPropagator;
@@ -18,6 +15,11 @@ use galvyn_core::re_exports::opentelemetry_sdk::propagation::TraceContextPropaga
 use galvyn_core::re_exports::opentelemetry_sdk::trace::SdkTracerProvider;
 use galvyn_core::re_exports::opentelemetry_sdk::Resource;
 use galvyn_core::re_exports::tracing_opentelemetry::OpenTelemetrySpanExt;
+use galvyn_core::re_exports::tracing_opentelemetry::SetParentError;
+use tower_http::trace::MakeSpan;
+use tower_http::trace::TraceLayer;
+use tracing::debug;
+use tracing::trace;
 use tracing::warn;
 use tracing::Span;
 use tracing::Subscriber;
@@ -57,17 +59,80 @@ impl OpenTelemetrySetup {
     }
 }
 
-/// Checks incoming requests for opentelemetry headers and set the appropriate parent span.
+/// Attaches remote opentelemetry traces received in the requests' headers.
+///
+/// It wraps a [`MakeSpan`] for [`tower_http`]'s [`TraceLayer`].
+///
+/// The `MakeSpan` MUST create the span without entering it.
+/// This should be the case for both `tower_http` implementations.
 #[derive(Copy, Clone, Debug, Default)]
-#[deprecated(note = "This entire API has to be re-designed, because dependency changed its API.")]
-pub struct ReceiveTracesMiddleware;
-impl SimpleGalvynMiddleware for ReceiveTracesMiddleware {
-    async fn pre_handler(&mut self, request: Request) -> ControlFlow<Response, Request> {
+pub struct AttachTraces<T>(pub T);
+impl<T: MakeSpan<B>, B> MakeSpan<B> for AttachTraces<T> {
+    fn make_span(&mut self, request: &axum::http::Request<B>) -> Span {
+        let span = self.0.make_span(request);
         let context = headers_to_context(request.headers());
-        if let Err(error) = Span::current().set_parent(context) {
-            warn!(%error, "Failed to set parent trace");
+        match span.set_parent(context) {
+            Ok(()) => {
+                trace!("Attached remote trace to request span");
+            }
+            Err(SetParentError::SpanDisabled) => {
+                debug!(
+                    reason = "span-disabled",
+                    "Can't attach remote trace to request span"
+                );
+            }
+            Err(SetParentError::LayerNotFound) => {
+                debug!(
+                    reason = "layer-not-found",
+                    "Can't attach remote trace to request span"
+                );
+            }
+            Err(SetParentError::AlreadyStarted) => {
+                warn!(
+                    reason = "already-started",
+                    explanation = format!(
+                        "The `{}` which is wrapped by `AttachTraces` already started the span it created. They are not compatible.",
+                        type_name::<T>()
+                    ),
+                    "Can't attach remote trace to request span"
+                );
+            }
         }
-        ControlFlow::Continue(request)
+        span
+    }
+}
+
+/// Extends [`TraceLayer`] and any `T: MakeSpan` with a convenience method for applying [`AttachTraces`]
+///
+/// (The generic `Any` is an artifact of rust's coherence check and can be ignored)
+pub trait AttachTracesExt<Any> {
+    /// The wrapped type
+    type Result;
+
+    /// Attach remote opentelemetry traces received in the requests' headers.
+    fn attach_traces(self) -> Self::Result;
+}
+
+mod brands {
+    pub struct Layer;
+}
+
+impl<A, B, C, D, E, F, G> AttachTracesExt<brands::Layer> for TraceLayer<A, B, C, D, E, F, G>
+where
+    B: Default,
+{
+    type Result = TraceLayer<A, AttachTraces<B>, C, D, E, F, G>;
+
+    fn attach_traces(self) -> Self::Result {
+        self.make_span_with(Default::default())
+    }
+}
+
+impl<B, T: MakeSpan<B>> AttachTracesExt<B> for T {
+    type Result = AttachTraces<T>;
+
+    fn attach_traces(self) -> Self::Result {
+        AttachTraces(self)
     }
 }
 

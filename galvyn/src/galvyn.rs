@@ -11,6 +11,7 @@ use galvyn_core::GalvynRouter;
 use tokio::net::TcpListener;
 use tokio::sync::SetOnce;
 use tokio::task::JoinSet;
+use tower_http::trace::TraceLayer;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -47,6 +48,11 @@ pub struct GalvynSetup {
     ///
     /// If you want to bring your own or tweak its parameters.
     pub disable_catch_unwind: bool,
+
+    /// Disables [`tower_http`]'s [`TraceLayer`]
+    ///
+    /// If you want to bring your own or tweak its parameters.
+    pub disable_request_tracing: bool,
 
     /// Disables galvyn's [panic hook](crate::panic_hook).
     ///
@@ -214,6 +220,12 @@ impl RouterBuilder {
         if !self.setup.disable_sessions {
             for router in self.listener.values_mut() {
                 *router = mem::take(router).layer(galvyn_core::session::layer());
+            }
+        }
+
+        if !self.setup.disable_request_tracing {
+            for router in self.listener.values_mut() {
+                *router = mem::take(router).layer(TraceLayer::new_for_http());
             }
         }
 
