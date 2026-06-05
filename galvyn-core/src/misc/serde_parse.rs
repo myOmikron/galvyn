@@ -1,8 +1,10 @@
 //! Deserializes a single string into some `T` using `.parse()`
 
+use std::marker::PhantomData;
 use std::str::FromStr;
 
 use serde::de::Error;
+use serde::de::IntoDeserializer;
 use serde::de::Visitor;
 
 /// Deserializes a single string into some `T` using `.parse()`
@@ -12,13 +14,37 @@ use serde::de::Visitor;
 ///
 /// This has one notable **exception**:
 /// `bool` supports `"true"`, `"yes"`, `"y"` and `"1"` (and the associated negations).
-pub struct StringParseDeserializer(
-    /// The input string to deserialize into some `T`.
-    pub String,
-);
+pub struct StringParseDeserializer<E = serde::de::value::Error> {
+    string: String,
+    _marker: PhantomData<E>,
+}
 
 impl StringParseDeserializer {
-    fn deserialize_parse<'de, V, T, E>(
+    /// Constructs a new `StringParseDeserializer`
+    pub fn new(string: String) -> Self {
+        Self {
+            string,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, E> IntoDeserializer<'de, E> for StringParseDeserializer<E>
+where
+    E: Error,
+{
+    type Deserializer = Self;
+
+    fn into_deserializer(self) -> Self::Deserializer {
+        self
+    }
+}
+
+impl<E> StringParseDeserializer<E>
+where
+    E: Error,
+{
+    fn deserialize_parse<'de, V, T>(
         self,
         visitor: V,
         visitor_fn: impl Fn(V, T) -> Result<V::Value, E>,
@@ -26,33 +52,35 @@ impl StringParseDeserializer {
     where
         V: Visitor<'de>,
         T: FromStr,
-        E: Error,
     {
-        match self.0.parse() {
+        match self.string.parse() {
             Ok(value) => visitor_fn(visitor, value),
-            Err(_) => visitor.visit_string(self.0),
+            Err(_) => visitor.visit_string(self.string),
         }
     }
 }
 
-impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
-    type Error = serde::de::value::Error;
+impl<'de, E> serde::de::Deserializer<'de> for StringParseDeserializer<E>
+where
+    E: Error,
+{
+    type Error = E;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        match self.0.as_str() {
+        match self.string.as_str() {
             "true" | "1" | "yes" | "y" => visitor.visit_bool(true),
             "false" | "0" | "no" | "n" => visitor.visit_bool(false),
-            _ => visitor.visit_string(self.0),
+            _ => visitor.visit_string(self.string),
         }
     }
 
@@ -137,28 +165,28 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -172,7 +200,7 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_unit_struct<V>(
@@ -183,7 +211,7 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_newtype_struct<V>(
@@ -201,14 +229,14 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_tuple_struct<V>(
@@ -220,14 +248,14 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_struct<V>(
@@ -239,7 +267,7 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_enum<V>(
@@ -251,20 +279,20 @@ impl<'de> serde::de::Deserializer<'de> for StringParseDeserializer {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_string(self.0)
+        visitor.visit_string(self.string)
     }
 }
