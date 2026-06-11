@@ -178,6 +178,7 @@ impl<E, F> From<F> for ApiError<E>
 where
     CoreApiError: From<F>,
 {
+    #[track_caller]
     fn from(value: F) -> Self {
         Self::CoreApiError(value.into())
     }
