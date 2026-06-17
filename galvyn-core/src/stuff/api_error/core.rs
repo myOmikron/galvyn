@@ -7,6 +7,8 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 #[cfg(feature = "opentelemetry")]
 use opentelemetry::trace::TraceId;
+#[cfg(feature = "rorm")]
+use rorm::db::transaction::TransactionError;
 use schemars::schema::Schema;
 use thiserror::Error;
 use tracing::debug;
@@ -259,6 +261,23 @@ impl<E: IntoServerError> From<E> for CoreApiError {
 }
 #[cfg(feature = "rorm")]
 impl IntoServerError for rorm::Error {}
+#[cfg(feature = "rorm")]
+impl From<TransactionError> for CoreApiError {
+    #[track_caller]
+    fn from(value: TransactionError) -> Self {
+        Self {
+            status_code: ApiErrorStatusCode::ServerError,
+            context: None,
+            location: Location::caller(),
+            source: Some(match value {
+                TransactionError::Database(x) => x.into(),
+                TransactionError::Hook(x) => x,
+            }),
+            #[cfg(feature = "opentelemetry")]
+            trace_id: Self::get_trace_id(),
+        }
+    }
+}
 #[cfg(feature = "sessions")]
 impl IntoServerError for tower_sessions::session::Error {}
 impl IntoServerError for anyhow::Error {}

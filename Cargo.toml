@@ -60,8 +60,8 @@ reqwest = { version = "~0.13", default-features = false, features = ["rustls"] }
 # Database #
 # -------- #
 
-rorm = { version = "~0.9", default-features = false }
-rorm-macro-impl = { version = "~0.10" }
+rorm = { version = "~0.10", default-features = false }
+rorm-macro-impl = { version = "~0.11" }
 
 # ------------- #
 # Observability #

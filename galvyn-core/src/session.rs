@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use rorm::Database;
 use rorm::Model;
 use rorm::and;
+use rorm::db::transaction::TransactionError;
 use rorm::fields::types::Json;
 use schemars::_serde_json::Value;
 use thiserror::Error;
@@ -214,13 +215,24 @@ impl ExpiredDeletion for RormStore {
 /// Error type that is used in the [SessionStore] trait
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
-pub enum RormStoreError {
+enum RormStoreError {
     #[error("Database error: {0}")]
     Database(#[from] rorm::Error),
     #[error("Decoding of id failed: {0}")]
     DecodingFailed(#[from] base64::DecodeSliceError),
+    // All the session code uses its own transaction internally and does not use hooks
+    #[error("This is a bug in galvyn: {0}")]
+    Hook(rorm::db::transaction::HookError),
 }
 
+impl From<TransactionError> for RormStoreError {
+    fn from(value: TransactionError) -> Self {
+        match value {
+            TransactionError::Database(x) => Self::Database(x),
+            TransactionError::Hook(x) => Self::Hook(x),
+        }
+    }
+}
 impl From<RormStoreError> for StoreError {
     fn from(value: RormStoreError) -> Self {
         Self::Backend(value.to_string())
