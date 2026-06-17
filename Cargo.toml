@@ -18,8 +18,8 @@ members = [
 # Core framework #
 # -------------- #
 
-galvyn-core = { version = "~0.4", path = "./galvyn-core", default-features = false }
-galvyn-macros = { version = "0.4", path = "./galvyn-macros" }
+galvyn-core = { version = "~0.5", path = "./galvyn-core", default-features = false }
+galvyn-macros = { version = "0.5", path = "./galvyn-macros" }
 
 # ----------------------- #
 # Algorithms & Data types #
