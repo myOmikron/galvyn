@@ -38,6 +38,7 @@ sessions = [
 [dependencies]
 # Webserver
 axum = { workspace = true, default-features = false, features = ["query", "form", "json"] }
+http-body = { version = "~1", default-features = false }
 bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { workspace = true }
@@ -50,7 +51,7 @@ anyhow = { workspace = true }
 rorm = { workspace = true, features = ["time"], optional = true }
 uuid = { version = "~1", features = ["v4", "serde"] }
 time = { version = "~0.3", features = ["serde", "formatting", "parsing", "macros"] }
-
+pin-project-lite = { version = "~0.2" }
 
 # TODO: maybe roll our own?
 tower-sessions = { version = "~0.15", optional = true }

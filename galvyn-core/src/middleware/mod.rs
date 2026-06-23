@@ -15,6 +15,7 @@ use tower::Layer;
 use tower::Service;
 
 pub mod catch_unwind;
+pub mod concurrency_limit;
 
 /// A middleware wraps a group of handler to alter their behaviour.
 ///
