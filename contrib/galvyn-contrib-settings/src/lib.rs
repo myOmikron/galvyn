@@ -17,7 +17,7 @@
 #![warn(missing_docs)]
 
 pub use crate::application_settings::ApplicationSettings;
-pub use crate::application_settings::ApplicationSettingsExt;
+pub use crate::application_settings::ModuleBuilderApplicationSettingsExt;
 pub use crate::settings_store::RegisterError;
 pub use crate::settings_store::SetError;
 pub use crate::settings_store::SettingsHandle;

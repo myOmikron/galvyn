@@ -24,6 +24,13 @@ pub struct RegistryBuilder {
     modules: Vec<(TypeId, UninitModule)>,
 }
 
+// Allows contrib to implement extension traits
+impl AsMut<Self> for RegistryBuilder {
+    fn as_mut(&mut self) -> &mut Self {
+        self
+    }
+}
+
 impl RegistryBuilder {
     /// Constructs a new `RegistryBuilder`
     pub fn new() -> Self {
@@ -35,8 +42,6 @@ impl RegistryBuilder {
     }
 
     /// Adds a new module to the `RegistryBuilder`
-    ///
-    /// Calling this method twice with the same `T` is not an error but will only add it once.
     #[instrument(level = "trace", name = "RegistryBuilder::register_module", skip(self), fields(module.name = type_name::<T>()))]
     pub fn register_module<T: Module>(&mut self, setup: T::Setup) -> &mut Self {
         if self.contains_module(TypeId::of::<T>()) {
