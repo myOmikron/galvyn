@@ -189,6 +189,7 @@ impl<T> TypedSemaphore<T> {
     }
 }
 
+/// A permit from a [`TypedSemaphore`].
 #[must_use]
 #[clippy::has_significant_drop]
 #[derive(Debug)]
@@ -255,6 +256,7 @@ impl<T> Deref for TypedSemaphorePermit<'_, T> {
     }
 }
 
+/// An owned permit from a [`TypedSemaphore`].
 #[must_use]
 #[clippy::has_significant_drop]
 #[derive(Debug)]

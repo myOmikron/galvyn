@@ -1,4 +1,5 @@
 //! Miscellaneous collection of utilities
+#![warn(missing_docs)]
 
 pub mod either;
 pub mod serde_env;

@@ -10,6 +10,7 @@ use serde::de::value::StringDeserializer;
 
 use crate::misc::serde_parse::StringParseDeserializer;
 
+/// Deserializes a collection from the environment variables
 pub fn from_env<T>() -> Result<T, serde::de::value::Error>
 where
     T: DeserializeOwned,
@@ -21,6 +22,7 @@ where
 ///
 /// It supports both map and sequence shaped collections.
 pub struct Deserializer {
+    /// Environment variables to deserialize from
     pub input: Vec<(String, String)>,
 }
 
