@@ -2,6 +2,7 @@ use galvyn_core::InitError;
 use galvyn_core::Module;
 use galvyn_core::PreInitError;
 use galvyn_core::TryGlobalError;
+use galvyn_core::registry::builder::RegistryBuilder;
 
 use crate::RegisterError;
 use crate::settings_store::SettingsStore;
@@ -86,17 +87,14 @@ pub trait ApplicationSettings: Sized + Send + Sync + 'static {
     }
 }
 
-/// Annoying glue code to convert a [`ApplicationSettings`] implementation
-/// into a [`Module`] implementation.
+/// Extension trait for registering [`ApplicationSettings`] as a [`Module`].
 ///
-/// This trait is hacky and subject to refactoring.
-///
-/// # Current usage
+/// # Usage
 /// ```rust
+/// use galvyn_contrib_settings::ModuleBuilderApplicationSettingsExt;
 /// # use galvyn_contrib_settings::ApplicationSettings;
 /// # use galvyn_contrib_settings::SettingsStore;
 /// # use galvyn_contrib_settings::RegisterError;
-/// # use galvyn_contrib_settings::ApplicationSettingsExt;
 /// # use galvyn_core::registry::builder::RegistryBuilder;
 ///
 /// struct MySettings {}
@@ -107,17 +105,19 @@ pub trait ApplicationSettings: Sized + Send + Sync + 'static {
 /// }
 ///
 /// # fn foo(builder: RegistryBuilder) {
-/// builder.register_module::<<MySettings as ApplicationSettingsExt>::Module>(Default::default())
+/// builder.register_settings::<MySettings>()
 /// # }
 /// ```
-pub trait ApplicationSettingsExt: ApplicationSettings {
-    /// `Self` wrapped to implement `Module`
-    type Module: Module;
+pub trait ModuleBuilderApplicationSettingsExt: AsMut<RegistryBuilder> {
+    /// Registers `T` as a module
+    fn register_settings<T: ApplicationSettings>(&mut self) -> &mut Self {
+        self.as_mut().register_module::<Adapter<T>>(Setup {});
+        self
+    }
 }
-impl<T: ApplicationSettings> ApplicationSettingsExt for T {
-    type Module = Adapter<T>;
-}
-pub struct Adapter<T: ApplicationSettings>(T);
+impl<B> ModuleBuilderApplicationSettingsExt for B where B: AsMut<RegistryBuilder> {}
+
+struct Adapter<T: ApplicationSettings>(T);
 impl<T: ApplicationSettings> Module for Adapter<T> {
     type Setup = Setup;
     type PreInit = PreInit;
@@ -137,6 +137,6 @@ impl<T: ApplicationSettings> Module for Adapter<T> {
 }
 
 #[derive(Default, Debug)]
-pub struct Setup {}
+struct Setup {}
 
-pub struct PreInit {}
+struct PreInit {}

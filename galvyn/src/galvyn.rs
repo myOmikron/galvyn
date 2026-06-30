@@ -155,6 +155,13 @@ pub struct ModuleBuilder {
     setup: GalvynSetup,
 }
 
+// Allows contrib to implement extension traits
+impl AsMut<RegistryBuilder> for ModuleBuilder {
+    fn as_mut(&mut self) -> &mut RegistryBuilder {
+        &mut self.modules
+    }
+}
+
 impl ModuleBuilder {
     fn new(mut setup: GalvynSetup) -> ModuleBuilder {
         if !setup.disable_panic_hook {

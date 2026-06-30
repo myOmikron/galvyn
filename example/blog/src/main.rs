@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 
 use galvyn::contrib::settings::ApplicationSettings;
-use galvyn::contrib::settings::ApplicationSettingsExt;
+use galvyn::contrib::settings::ModuleBuilderApplicationSettingsExt;
 use galvyn::contrib::settings::SettingsStore;
 use galvyn::core::re_exports::axum::response::IntoResponse;
 use galvyn::core::re_exports::axum::response::Response;
@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Galvyn::builder(Default::default())
         .register_module::<Database>(Default::default())
         .register_module::<SettingsStore>(Default::default())
-        .register_module::<<Settings as ApplicationSettingsExt>::Module>(Default::default())
+        .register_settings::<Settings>()
         .init_modules()
         .await?
         .add_listener(
