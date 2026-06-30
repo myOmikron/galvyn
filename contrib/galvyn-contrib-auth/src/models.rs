@@ -1,6 +1,7 @@
 use galvyn_core::re_exports::rorm::fields::types::Json;
 use galvyn_core::re_exports::rorm::prelude::ForeignModel;
 use galvyn_core::re_exports::rorm::Model;
+use galvyn_core::re_exports::time::OffsetDateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use webauthn_rs::prelude::AttestedPasskey;
@@ -11,64 +12,45 @@ pub struct Account {
     #[rorm(id)]
     pub pk: i64,
 
-    #[rorm(unique, max_length = 255)]
-    pub id: String,
+    #[rorm(max_length = 255)]
+    pub username: String,
+
+    #[rorm(max_length = 255)]
+    pub first_name: Option<String>,
+
+    #[rorm(max_length = 255)]
+    pub last_name: Option<String>,
+
+    #[rorm(max_length = 255)]
+    pub email: Option<String>,
+
+    pub is_active: bool,
+
+    pub is_superuser: bool,
+
+    pub last_login: Option<OffsetDateTime>,
+
+    #[rorm(auto_create_time)]
+    pub created_at: OffsetDateTime,
 }
 
+#[allow(non_upper_case_globals)]
+pub const AccountOidcLogin: __GenericOidcLogin_ValueSpaceImpl<Account> =
+    GenericOidcLogin::<Account>;
+pub type AccountOidcLogin = GenericOidcLogin<Account>;
+rorm::register_model!(AccountOidcLogin);
+
 #[derive(Model)]
-pub struct OidcAccount {
+#[rorm(experimental_generics)]
+pub struct GenericOidcLogin<Account: Model> {
     #[rorm(id)]
     pub pk: i64,
 
     #[rorm(max_length = 255)]
-    pub id: String,
+    pub sub: String,
+
+    #[rorm(max_length = 255)]
+    pub iss: String,
 
     pub account: ForeignModel<Account>,
-}
-
-#[derive(Model)]
-pub struct LocalAccount {
-    #[rorm(id)]
-    pub pk: i64,
-
-    #[rorm(max_length = 1024)]
-    pub password: Option<String>,
-
-    pub account: ForeignModel<Account>,
-}
-
-#[derive(Model)]
-pub struct TotpKey {
-    #[rorm(id)]
-    pub pk: i64,
-
-    #[rorm(on_delete = "Cascade", on_update = "Cascade")]
-    pub local_account: ForeignModel<LocalAccount>,
-
-    #[rorm(max_length = 255)]
-    pub label: String,
-
-    #[rorm(max_length = 32)]
-    pub secret: Vec<u8>,
-}
-
-#[derive(Model)]
-pub struct WebAuthnKey {
-    #[rorm(id)]
-    pub pk: i64,
-
-    #[rorm(on_delete = "Cascade", on_update = "Cascade")]
-    pub local_account: ForeignModel<LocalAccount>,
-
-    #[rorm(max_length = 255)]
-    pub label: String,
-
-    pub key: Json<MaybeAttestedPasskey>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[allow(missing_docs)]
-pub enum MaybeAttestedPasskey {
-    NotAttested(Passkey),
-    Attested(AttestedPasskey),
 }

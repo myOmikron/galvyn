@@ -1,7 +1,6 @@
-pub mod handler;
+mod handler;
 mod models;
-mod module;
 
 pub use models::Account;
-pub use models::MaybeAttestedPasskey;
-pub use module::AuthModule;
+pub use models::AccountOidcLogin;
+pub use models::GenericOidcLogin;

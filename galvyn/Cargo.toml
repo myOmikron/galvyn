@@ -84,7 +84,7 @@ sessions = [
 # Enables a graceful shutdown upon receiving a termination signal
 graceful-shutdown = ["dep:signal-hook", "dep:signal-hook-tokio"]
 
-Includes the galvyn-contrib-auth crate
+# Includes the galvyn-contrib-auth crate
 contrib-auth = ["dep:galvyn-contrib-auth"]
 
 # Includes the galvyn-contrib-oauth crate
