@@ -7,6 +7,7 @@ use futures_concurrency::future::Join;
 use futures_lite::future;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
+use tracing::Span;
 use tracing::debug;
 use tracing::debug_span;
 use tracing::instrument;
@@ -56,7 +57,7 @@ impl RegistryBuilder {
 
             self.modules.push((
                 TypeId::of::<T>(),
-                BoxDynFnOnce::new(move |()| {
+                BoxDynFnOnce::new(move |(span,)| {
                     (
                         type_name::<T>(),
                         tokio::spawn(async {
@@ -69,6 +70,7 @@ impl RegistryBuilder {
                                 result
                             }
                             .instrument(debug_span!(
+                                parent: &span,
                                 "Module::pre_init",
                                 module.name = type_name::<T>()
                             ))
@@ -90,6 +92,7 @@ impl RegistryBuilder {
                                             result.map_err(|x| (type_name::<T>(), x))
                                         }
                                         .instrument(debug_span!(
+                                            parent: span,
                                             "Module::init",
                                             module.name = type_name::<T>()
                                         ))
@@ -118,8 +121,10 @@ impl RegistryBuilder {
     /// and makes the registry available through [`Registry::global`].
     #[instrument(level = "debug", name = "RegistryBuilder::init", skip(self))]
     pub async fn init(&mut self) -> Result<(), InitError> {
+        let span = Span::current();
+
         let pre_init_modules =
-            process_join_handles(self.modules.drain(..).map(|(_, x)| x.call(())))
+            process_join_handles(self.modules.drain(..).map(|(_, x)| x.call((span.clone(),))))
                 .await
                 .map_err(InitError::PreInit)?;
 
@@ -193,7 +198,7 @@ impl Error for InitError {}
 
 /// An uninitialised module waiting to be pre-initialised
 type UninitModule = BoxDynFnOnce<
-    (),
+    (Span,),
     (
         &'static str,
         JoinHandle<Result<PreInitModule, module::PreInitError>>,
