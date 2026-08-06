@@ -8,9 +8,9 @@ use futures_lite::future;
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 use tracing::debug;
+use tracing::debug_span;
 use tracing::instrument;
 use tracing::trace;
-use tracing::trace_span;
 
 use crate::module;
 use crate::module::Module;
@@ -68,7 +68,7 @@ impl RegistryBuilder {
                                 }
                                 result
                             }
-                            .instrument(trace_span!(
+                            .instrument(debug_span!(
                                 "Module::pre_init",
                                 module.name = type_name::<T>()
                             ))
@@ -89,7 +89,7 @@ impl RegistryBuilder {
                                             }
                                             result.map_err(|x| (type_name::<T>(), x))
                                         }
-                                        .instrument(trace_span!(
+                                        .instrument(debug_span!(
                                             "Module::init",
                                             module.name = type_name::<T>()
                                         ))
@@ -116,7 +116,7 @@ impl RegistryBuilder {
     /// Initialized all registered modules
     ///
     /// and makes the registry available through [`Registry::global`].
-    #[instrument(level = "trace", name = "RegistryBuilder::init", skip(self))]
+    #[instrument(level = "debug", name = "RegistryBuilder::init", skip(self))]
     pub async fn init(&mut self) -> Result<(), InitError> {
         let pre_init_modules =
             process_join_handles(self.modules.drain(..).map(|(_, x)| x.call(())))
@@ -219,7 +219,7 @@ impl<M: Module> DynModule for M {
                     }
                     result
                 }
-                .instrument(trace_span!(
+                .instrument(debug_span!(
                     "Module::post_init",
                     module.name = type_name::<Self>()
                 )),
