@@ -38,9 +38,9 @@ where
         };
 
         if matches!(part_to_redact, PartToRedact::Nothing) {
-            self.sensitiv.serialize(serializer)
+            self.sensitive.serialize(serializer)
         } else {
-            self.sensitiv.serialize(RedactingSerializer {
+            self.sensitive.serialize(RedactingSerializer {
                 inner: serializer,
                 part_to_redact,
             })
@@ -64,7 +64,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        T::deserialize_in_place(deserializer, &mut place.sensitiv)
+        T::deserialize_in_place(deserializer, &mut place.sensitive)
     }
 }
 

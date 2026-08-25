@@ -22,7 +22,7 @@ where
         if matches!(part_to_redact, PartToRedact::Everything) {
             f.write_str("-redacted-")
         } else {
-            let value = format!("{:?}", self.sensitiv);
+            let value = format!("{:?}", self.sensitive);
             f.write_str(part_to_redact.redact(&value).as_ref())
         }
     }
@@ -39,7 +39,7 @@ where
         if matches!(part_to_redact, PartToRedact::Everything) {
             f.write_str("-redacted-")
         } else {
-            let value = format!("{}", self.sensitiv);
+            let value = format!("{}", self.sensitive);
             f.write_str(part_to_redact.redact(&value).as_ref())
         }
     }
@@ -52,13 +52,13 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            sensitiv: self.sensitiv.clone(),
+            sensitive: self.sensitive.clone(),
             config: PhantomData,
         }
     }
 
     fn clone_from(&mut self, source: &Self) {
-        self.sensitiv.clone_from(&source.sensitiv)
+        self.sensitive.clone_from(&source.sensitive)
     }
 }
 impl<T, Config> Eq for Redacted<T, Config> where T: Eq {}
@@ -67,7 +67,7 @@ where
     T: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.sensitiv.eq(&other.sensitiv)
+        self.sensitive.eq(&other.sensitive)
     }
 }
 impl<T, Config> Ord for Redacted<T, Config>
@@ -75,7 +75,7 @@ where
     T: Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.sensitiv.cmp(&other.sensitiv)
+        self.sensitive.cmp(&other.sensitive)
     }
 }
 impl<T, Config> PartialOrd for Redacted<T, Config>
@@ -83,7 +83,7 @@ where
     T: PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.sensitiv.partial_cmp(&other.sensitiv)
+        self.sensitive.partial_cmp(&other.sensitive)
     }
 }
 impl<T, Config> Hash for Redacted<T, Config>
@@ -91,6 +91,6 @@ where
     T: Hash,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.sensitiv.hash(state)
+        self.sensitive.hash(state)
     }
 }

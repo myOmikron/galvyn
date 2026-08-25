@@ -17,9 +17,9 @@ mod std_impls;
 ///
 /// # Why
 ///
-/// This is useful to mark sensitiv values in the typesystem and prevent accidental leaks to logging.
+/// This is useful to mark sensitive values in the typesystem and prevent accidental leaks to logging.
 ///
-/// A sensitiv value might for example be a secret or a person's data protected by law.
+/// A sensitive value might for example be a secret or a person's data protected by law.
 ///
 /// # How
 ///
@@ -36,24 +36,25 @@ pub struct Redacted<T, Config = Fully> {
     /// Accessing it is not directly dangerous but should be done with care, not to leak it.
     ///
     /// # Don't:
+    ///
     /// ```rust
     /// # use galvyn_core::misc::redacted::Redacted;
     /// #
     /// let secret = Redacted::new("very secret");
-    /// println!("{}", secret.sensitif); // Leak to stdout
+    /// println!("{}", secret.sensitive); // Leak to stdout
     /// ```
     ///
-    /// # Do
+    /// # Do:
     ///
     /// ```rust
     /// # use galvyn_core::misc::redacted::Redacted;
     /// #
     /// let secret = Redacted::new("very secret");
-    /// is_valid(&secret.sensitiv); // Check the actual value
+    /// is_valid(&secret.sensitive); // Check the actual value
     /// // Of course, `is_valid` should not leak the secret either.
     /// // Ideally you carry the `Redacted` type through your code as long as possible.
     /// ```
-    pub sensitiv: T,
+    pub sensitive: T,
     config: PhantomData<Config>,
 }
 
@@ -66,7 +67,7 @@ where
     /// What trait is redacted to what degree is subject to the generic `Config`.
     pub const fn new(value: T) -> Self {
         Self {
-            sensitiv: value,
+            sensitive: value,
             config: PhantomData,
         }
     }
