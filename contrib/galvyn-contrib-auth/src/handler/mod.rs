@@ -50,12 +50,12 @@ pub async fn get_login_flow(
     };
 
     let oidc = rorm::query(&mut tx, OidcAccount.account)
-        .condition(OidcAccount.account.equals(&account_pk))
+        .condition(OidcAccount.account.equals(account_pk))
         .optional()
         .await?;
 
     let local = rorm::query(&mut tx, (LocalAccount.pk, LocalAccount.password))
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?;
 
@@ -63,7 +63,7 @@ pub async fn get_login_flow(
         (Some(_), None) => GetLoginFlowsResponse::Oidc(OidcLoginFlow {}),
         (None, Some((local_pk, password))) => {
             let webauthn = rorm::query(&mut tx, WebAuthnKey.key)
-                .condition(WebAuthnKey.local_account.equals(&local_pk))
+                .condition(WebAuthnKey.local_account.equals(local_pk))
                 .all()
                 .await?
                 .into_iter()
@@ -95,13 +95,13 @@ pub async fn login_local_webauthn(
         .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?
         .ok_or(ApiError::bad_request("Not a local account"))?;
 
     let keys = rorm::query(&mut tx, WebAuthnKey.key)
-        .condition(WebAuthnKey.local_account.equals(&local_account_pk))
+        .condition(WebAuthnKey.local_account.equals(local_account_pk))
         .all()
         .await?;
     let keys = keys
@@ -166,13 +166,13 @@ pub async fn finish_login_local_webauthn(
         .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_pk = rorm::query(&mut tx, LocalAccount.pk)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?
         .ok_or(ApiError::bad_request("Not a local account"))?;
 
     let keys = rorm::query(&mut tx, WebAuthnKey.key)
-        .condition(WebAuthnKey.local_account.equals(&local_account_pk))
+        .condition(WebAuthnKey.local_account.equals(local_account_pk))
         .all()
         .await?;
     let _used_key = keys
@@ -206,7 +206,7 @@ pub async fn login_local_password(
         .ok_or(ApiError::bad_request("Account not found"))?;
 
     let local_account_password = rorm::query(&mut tx, LocalAccount.password)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?
         .ok_or(ApiError::bad_request("Not a local account"))?;

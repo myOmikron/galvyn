@@ -27,7 +27,7 @@ pub async fn set_local_password(
     let mut tx = AuthModule::global().db.start_transaction().await?;
 
     let _local_pk = rorm::query(&mut tx, LocalAccount.pk)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?
         .ok_or(ApiError::bad_request("User is not a local one"))?;
@@ -36,7 +36,7 @@ pub async fn set_local_password(
 
     rorm::update(&mut tx, LocalAccount)
         .set(LocalAccount.password, Some(request))
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .await?;
 
     tx.commit().await?;
@@ -54,13 +54,13 @@ pub async fn delete_local_password(session: Session) -> ApiResult<()> {
     let mut tx = AuthModule::global().db.start_transaction().await?;
 
     let local_pk = rorm::query(&mut tx, LocalAccount.pk)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .optional()
         .await?
         .ok_or(ApiError::bad_request("User is not a local one"))?;
 
     let has_webauthn = rorm::query(&mut tx, WebAuthnKey.key)
-        .condition(WebAuthnKey.local_account.equals(&local_pk))
+        .condition(WebAuthnKey.local_account.equals(local_pk))
         .all()
         .await?
         .into_iter()
@@ -71,7 +71,7 @@ pub async fn delete_local_password(session: Session) -> ApiResult<()> {
 
     rorm::update(&mut tx, LocalAccount)
         .set(LocalAccount.password, None)
-        .condition(LocalAccount.account.equals(&account_pk))
+        .condition(LocalAccount.account.equals(account_pk))
         .await?;
 
     tx.commit().await?;
