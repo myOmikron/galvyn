@@ -20,7 +20,7 @@ rorm = { workspace = true, optional = true }
 # Contrib modules
 # galvyn-contrib-auth = { version = "~0.4", path = "../contrib/galvyn-contrib-auth", optional = true }
 # galvyn-contrib-oauth = { version = "~0.4", path = "../contrib/galvyn-contrib-oauth", optional = true }
-galvyn-contrib-settings = { version = "~0.5", path = "../contrib/galvyn-contrib-settings", optional = true }
+galvyn-contrib-settings = { version = "~0.6", path = "../contrib/galvyn-contrib-settings", optional = true }
 # galvyn-contrib-timers = { version = "~0.3", path = "../contrib/galvyn-contrib-timers", optional = true }
 
 # Error handling
