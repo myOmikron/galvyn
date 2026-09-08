@@ -18,7 +18,7 @@ members = [
 # Core framework #
 # -------------- #
 
-galvyn-core = { version = "~0.6", path = "./galvyn-core", default-features = false }
+galvyn-core = { version = "~0.7", path = "./galvyn-core", default-features = false }
 galvyn-macros = { version = "0.6", path = "./galvyn-macros" }
 
 # ----------------------- #
