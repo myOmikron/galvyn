@@ -1,6 +1,6 @@
 [package]
 name = "galvyn"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 license = "MPL-2.0"
@@ -107,6 +107,7 @@ rorm-default = [
     "rorm-uuid",
     "rorm-url",
     "rorm-schemars",
+    "rorm-zeroize",
     "rorm-cli",
     "rorm",
 ]
@@ -134,6 +135,9 @@ rorm-utoipa = ["rorm/utoipa"]
 
 # Implements JsonSchema for some rorm-specific types
 rorm-schemars = ["rorm/schemars"]
+
+# Implements Zeroize for some rorm-specific types
+rorm-zeroize = ["rorm/zeroize"]
 
 # Adds MsgPack type to store arbitrary serde compatible data using the message pack format
 rorm-msgpack = ["rorm/msgpack"]
