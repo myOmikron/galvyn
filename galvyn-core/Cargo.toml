@@ -35,6 +35,9 @@ sessions = [
     "dep:tower-sessions",
 ]
 
+# Experimental support for multiple registries
+multi-registry = []
+
 [dependencies]
 # Webserver
 axum = { workspace = true, default-features = false, features = ["query", "form", "json"] }
