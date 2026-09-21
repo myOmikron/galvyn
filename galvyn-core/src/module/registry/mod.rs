@@ -95,7 +95,6 @@ impl Registry {
         global
     }
 
-    #[track_caller]
     pub async fn global_wait() -> &'static Self {
         Self::raw_global().wait().await
     }

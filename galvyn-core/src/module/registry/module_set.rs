@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
@@ -54,28 +55,16 @@ impl LeakedModuleSet {
 }
 
 fn downcast_box<T: Module>(module: Box<dyn DynModule>) -> Box<T> {
-    if module.as_ref().type_id() != TypeId::of::<T>() {
-        // The two places calling this method ensure `T` to be correct
-        unreachable!()
-    }
-
-    // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
-    // that check for memory safety because rust has implemented Any for all types; no other
-    // impls can exist as they would conflict with their impl.
-    unsafe {
-        let raw = Box::into_raw(module);
-        Box::from_raw(raw as *mut T)
-    }
+    let module: Box<dyn Any> = module;
+    module
+        .downcast()
+        .expect("The caller should pass the correct type and value")
 }
 fn downcast_ref<T: Module>(module: &dyn DynModule) -> &T {
-    if module.type_id() != TypeId::of::<T>() {
-        unreachable!()
-    }
-
-    // SAFETY: just checked whether we are pointing to the correct type, and we can rely on
-    // that check for memory safety because rust has implemented Any for all types; no other
-    // impls can exist as they would conflict with their impl.
-    unsafe { &*(module as *const dyn DynModule as *const T) }
+    let module: &dyn Any = module;
+    module
+        .downcast_ref()
+        .expect("The caller should pass the correct type and value")
 }
 
 struct BuildXorHasher;
