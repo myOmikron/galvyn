@@ -18,6 +18,8 @@ pub use self::aggregator::FormErrors;
 use crate::handler::context::EndpointContext;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
+#[cfg(doc)]
+use crate::stuff::api_error::core::ApiErrorStatusCode;
 use crate::stuff::api_error::core::CoreApiError;
 use crate::stuff::api_json::ApiJson;
 use crate::stuff::schema::FormErrorResponse;

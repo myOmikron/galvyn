@@ -1,6 +1,6 @@
 /// JSON Extractor / Response which doesn't require [`JsonSchema`](schemars::JsonSchema)
 ///
-/// It is an alternative to [`Json`] (re-exported from `axum`)
+/// It is an alternative to [`Json`](axum::Json) (re-exported from `axum`)
 /// which ignores whether `T` implements [`JsonSchema`](schemars::JsonSchema).
 #[derive(Copy, Clone, Debug)]
 pub struct SchemalessJson<T>(pub T);

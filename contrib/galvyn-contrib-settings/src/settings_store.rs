@@ -99,7 +99,7 @@ impl SettingsStore {
 
 /// A registered settings singleton of type `T`
 ///
-/// It provides a [`set`] method for updating the settings
+/// It provides a [`set`](SettingsHandle::set) method for updating the settings
 /// and a several methods for retrieving it in various levels of abstraction.
 pub struct SettingsHandle<T> {
     key: SettingsKey,
@@ -110,7 +110,7 @@ pub struct SettingsHandle<T> {
 impl<T: Serialize> SettingsHandle<T> {
     /// Clones the current value.
     ///
-    /// This method is preferred to [`borrow`] because it can't be used incorrectly
+    /// This method is preferred to [`borrow`](SettingsHandle::borrow) because it can't be used incorrectly
     /// and the cost of a `Clone` is usually neglectable.
     pub fn get(&self) -> T
     where
@@ -188,6 +188,8 @@ pub enum RegisterError {
     /// Was this change backwards compatible?
     ///
     /// (Assuming your [`Serialize`] implementation matches your [`Deserialize`] implementation.)
+    ///
+    /// [`Deserialize`]: galvyn_core::re_exports::serde::de::Deserialize
     #[error("{0}")]
     DeserializeCurrent(serde_json::Error),
 }

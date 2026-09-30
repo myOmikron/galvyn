@@ -7,7 +7,7 @@ use tracing::field::Visit;
 use tracing::span;
 use tracing::Event;
 
-/// Additional `record_...` methods for [`Span`] and [`Event`]
+/// Additional `record_...` methods for [`Span`](tracing::Span) and [`Event`]
 ///
 /// `Span` does not implement this trait directly because it is just a handle to the actual span data.
 /// It is implemented on [`span::Attributes`] and [`span::Record`]

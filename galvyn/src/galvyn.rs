@@ -26,7 +26,7 @@ use crate::panic_hook::set_panic_hook;
 
 /// Global handle to the running galvyn server
 ///
-/// Start creating your server by calling [`Galvyn::new`].
+/// Start creating your server by calling [`Galvyn::builder`].
 #[non_exhaustive]
 pub struct Galvyn {
     routes: HashMap<SocketAddr, Vec<GalvynRoute>>,
@@ -82,7 +82,7 @@ impl Galvyn {
     /// # Panics
     /// If galvyn has not been started yet.
     ///
-    /// If you want to wait until it has started, use [`Galvyn::started`].
+    /// If you want to wait until it has started, use [`Galvyn::global_wait`].
     pub fn global() -> &'static Self {
         Self::try_global().unwrap_or_else(|| panic!("Galvyn has not been started yet."))
     }
@@ -92,7 +92,7 @@ impl Galvyn {
     /// # None
     /// If galvyn has not been started yet.
     ///
-    /// If you want to wait until it has started, use [`Galvyn::started`].
+    /// If you want to wait until it has started, use [`Galvyn::global_wait`].
     pub fn try_global() -> Option<&'static Self> {
         INSTANCE.get()
     }

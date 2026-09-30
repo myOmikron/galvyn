@@ -6,7 +6,7 @@ use tracing::error;
 
 /// Sets the global panic hook to output tracing events instead of writing to stdout
 ///
-/// This function will be called implicitly by [`Galvyn::new`](crate::galvyn::Galvyn::new)
+/// This function will be called implicitly by [`Galvyn::builder`](crate::galvyn::Galvyn::builder)
 pub fn set_panic_hook() {
     panic::set_hook(Box::new(panic_hook))
 }

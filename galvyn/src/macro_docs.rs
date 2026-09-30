@@ -37,7 +37,7 @@ pub use galvyn_macros::get;
 ///
 /// - `path`: The HTTP url this handler should respond on
 ///
-///     Note, the [`ApiContext`](crate::ApiContext) can be used to apply a common prefix to a set of handlers.
+///     Note, the [`GalvynRouter`](crate::core::GalvynRouter) can be used to apply a common prefix to a set of handlers.
 ///     - **required**
 ///     - a string literal, for example `path = "/"`
 ///

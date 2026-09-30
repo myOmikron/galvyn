@@ -13,7 +13,7 @@ use serde_json::Value;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
-/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::r#gen::SchemaGenerator),
+/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::gen::SchemaGenerator),
 /// you can use [`AsRef`] and [`AsMut`] to gain access.
 pub struct SchemaGenerator(InnerGenerator);
 impl AsRef<InnerGenerator> for SchemaGenerator {

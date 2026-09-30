@@ -25,7 +25,7 @@ pub mod opentelemetry;
 /// [`Format`](tracing_subscriber::fmt::format::Format) for `tracing_subscriber::fmt` layer.
 ///
 /// It formats each event as its own self-contained flat JSON log line,
-/// similar to the [`Json`](tracing_subscriber::fmt::format::Json) format.
+/// similar to the `tracing_subscriber::fmt::format::Json` format.
 ///
 /// It has at least the following keys:
 /// - `service_name`

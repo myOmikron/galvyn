@@ -15,9 +15,7 @@ use crate::middleware::GalvynMiddleware;
 
 mod metadata;
 
-/// An `GalvynRouter` combines several [`SwaggapiHandler`] under a common path.
-///
-/// It is also responsible for adding them to [`SwaggapiPage`]s once mounted to your application.
+/// An `GalvynRouter` combines several [`GalvynHandler`] under a common path.
 ///
 /// TODO: update these docs
 #[derive(Debug, Default)]
