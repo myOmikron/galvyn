@@ -172,7 +172,7 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
                         }
                         handled_params.extend(
                             unhandled_params
-                                .drain(..items.len())
+                                .drain(..items.len().min(unhandled_params.len()))
                                 .zip(items)
                                 .map(|(key, schema)| (key.to_string(), Some(schema))),
                         );
@@ -515,6 +515,19 @@ mod tests {
                 param("y", Some(u32_json())),
             ]
         );
+    }
+
+    #[test]
+    fn path_tuple_longer_than_path() {
+        // Surplus tuple elements are dropped (with a warning)
+        assert_eq!(
+            path_params::<Path<(Uuid, u32, String)>>(PATH),
+            vec![
+                param("x", Some(json!({"type": "string", "format": "uuid"}))),
+                param("y", Some(u32_json())),
+            ]
+        );
+        assert_eq!(path_params::<Path<(Uuid, u32)>>("/a"), vec![]);
     }
 
     #[test]
