@@ -1,15 +1,7 @@
 use schemars::JsonSchema;
-use schemars::Map;
-use schemars::r#gen::SchemaGenerator as InnerGenerator;
-use schemars::r#gen::SchemaSettings;
-use schemars::schema::InstanceType;
-use schemars::schema::ObjectValidation;
-use schemars::schema::Schema;
-use schemars::schema::SchemaObject;
-use schemars::schema::SingleOrVec;
-use schemars::visit::Visitor;
-use schemars::visit::visit_schema_object;
-use serde_json::Value;
+use schemars::Schema;
+use schemars::SchemaGenerator as InnerGenerator;
+use schemars::generate::SchemaSettings;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
@@ -34,9 +26,7 @@ impl Default for SchemaGenerator {
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {
-        let mut settings = SchemaSettings::openapi3();
-        settings.visitors.push(Box::new(ReplaceNullType));
-        Self(InnerGenerator::new(settings))
+        Self(InnerGenerator::new(SchemaSettings::openapi3()))
     }
 
     /// Generate an openapi schema for the type `T`
@@ -45,8 +35,8 @@ impl SchemaGenerator {
     /// already added to the generator previously.
     pub fn generate<T: JsonSchema>(&mut self) -> Schema {
         let mut schema = self.0.subschema_for::<T>();
-        for v in self.0.visitors_mut() {
-            v.visit_schema(&mut schema);
+        for v in self.0.transforms_mut() {
+            v.transform(&mut schema);
         }
         schema
     }
@@ -61,8 +51,8 @@ impl SchemaGenerator {
     /// Namely, [`JsonSchema::json_schema`] **should not** return a `$ref` schema.
     pub fn generate_refless<T: JsonSchema>(&mut self) -> Schema {
         let mut schema = T::json_schema(&mut self.0);
-        for v in self.0.visitors_mut() {
-            v.visit_schema(&mut schema);
+        for v in self.0.transforms_mut() {
+            v.transform(&mut schema);
         }
         schema
     }
@@ -72,42 +62,52 @@ impl SchemaGenerator {
     /// Returns `None` if `T` produced a schema of another type.
     ///
     /// This convenience method is used when `T` describes parameters for a handler and not a body.
-    pub fn generate_object<T: JsonSchema>(&mut self) -> Option<Box<ObjectValidation>> {
-        let schema = self.generate_refless::<T>();
-        match schema {
-            Schema::Object(SchemaObject {
-                object: Some(object),
-                ..
-            }) => Some(object),
-            _ => None,
+    pub fn generate_object<T: JsonSchema>(
+        &mut self,
+    ) -> Option<serde_json::Map<String, serde_json::Value>> {
+        let schema = self.generate_refless::<T>().to_object()?;
+        if schema.get("type").is_some_and(|x| x == "object") {
+            Some(schema)
+        } else {
+            None
         }
     }
 
-    pub fn into_definitions(mut self) -> Map<String, Schema> {
-        let mut definitions = self.0.take_definitions();
-        for v in self.0.visitors_mut() {
-            for s in definitions.values_mut() {
-                v.visit_schema(s);
-            }
-        }
-        definitions
+    pub fn into_definitions(mut self) -> serde_json::Map<String, serde_json::Value> {
+        self.0.take_definitions(
+            // apply-transforms:
+            true,
+        )
     }
 }
 
-#[derive(Debug, Clone)]
-struct ReplaceNullType;
-impl Visitor for ReplaceNullType {
-    fn visit_schema_object(&mut self, schema: &mut SchemaObject) {
-        #[expect(clippy::collapsible_if, reason = "Only allowed on newer rust versions")]
-        if let Some(SingleOrVec::Single(boxed)) = &schema.instance_type {
-            if **boxed == InstanceType::Null {
-                schema.instance_type = None;
-                schema
-                    .extensions
-                    .insert("nullable".to_string(), Value::Bool(true));
-            }
+pub trait SchemaExt {
+    /// Owned version of [`Schema::as_object`] or [`serde_json::Value::as_object`]
+    fn to_object(self) -> Option<serde_json::Map<String, serde_json::Value>>;
+
+    /// Owned version of [`Schema::get`] or [`serde_json::Value::get`]
+    fn get_owned(self, key: &str) -> Option<serde_json::Value>;
+}
+impl SchemaExt for Schema {
+    fn to_object(self) -> Option<serde_json::Map<String, serde_json::Value>> {
+        self.to_value().to_object()
+    }
+
+    fn get_owned(self, key: &str) -> Option<serde_json::Value> {
+        self.to_value().get_owned(key)
+    }
+}
+impl SchemaExt for serde_json::Value {
+    fn to_object(self) -> Option<serde_json::Map<String, serde_json::Value>> {
+        if let Self::Object(x) = self {
+            Some(x)
+        } else {
+            None
         }
-        visit_schema_object(self, schema);
+    }
+
+    fn get_owned(self, key: &str) -> Option<serde_json::Value> {
+        self.to_object().and_then(|mut x| x.remove(key))
     }
 }
 
@@ -116,8 +116,24 @@ impl Visitor for ReplaceNullType {
 /// Tests should only compare schemas through this function
 /// to be independent of `schemars`' internal representation.
 #[cfg(test)]
-pub(crate) fn schema_to_json(schema: &Schema) -> Value {
-    serde_json::to_value(schema).expect("Schemas should always be serializable")
+pub(crate) fn schema_to_json(schema: &impl AsJson) -> serde_json::Value {
+    schema.as_json().clone()
+}
+#[cfg(test)]
+trait AsJson {
+    fn as_json(&self) -> &serde_json::Value;
+}
+#[cfg(test)]
+impl AsJson for serde_json::Value {
+    fn as_json(&self) -> &serde_json::Value {
+        &self
+    }
+}
+#[cfg(test)]
+impl AsJson for Schema {
+    fn as_json(&self) -> &serde_json::Value {
+        self.as_value()
+    }
 }
 
 #[cfg(test)]
@@ -159,7 +175,7 @@ mod tests {
             "type": "object",
             "required": ["name", "unit"],
             "properties": {
-                "maybe": {"type": "integer", "format": "uint32", "minimum": 0.0, "nullable": true},
+                "maybe": {"type": "integer", "format": "uint32", "minimum": 0, "nullable": true},
                 "name": {"description": "Some name", "type": "string"},
                 "unit": {"nullable": true}
             }
@@ -198,7 +214,7 @@ mod tests {
         );
         assert_eq!(
             schema_to_json(&generator.generate::<u64>()),
-            json!({"type": "integer", "format": "uint64", "minimum": 0.0})
+            json!({"type": "integer", "format": "uint64", "minimum": 0})
         );
         assert_eq!(
             schema_to_json(&generator.generate::<Vec<String>>()),
@@ -210,7 +226,7 @@ mod tests {
                 "type": "array",
                 "items": [
                     {"type": "string", "format": "uuid"},
-                    {"type": "integer", "format": "uint32", "minimum": 0.0}
+                    {"type": "integer", "format": "uint32", "minimum": 0}
                 ],
                 "maxItems": 2,
                 "minItems": 2
@@ -237,7 +253,7 @@ mod tests {
         );
         assert_eq!(
             schema_to_json(&generator.generate::<Option<u64>>()),
-            json!({"type": "integer", "format": "uint64", "minimum": 0.0, "nullable": true})
+            json!({"type": "integer", "format": "uint64", "minimum": 0, "nullable": true})
         );
         assert_eq!(
             schema_to_json(&generator.generate::<Option<Refd>>()),
@@ -250,7 +266,7 @@ mod tests {
         let mut generator = SchemaGenerator::new();
         let expected = json!({
             "anyOf": [
-                {"type": "integer", "format": "uint32", "minimum": 0.0},
+                {"type": "integer", "format": "uint32", "minimum": 0},
                 {"nullable": true}
             ]
         });
@@ -284,9 +300,10 @@ mod tests {
         assert_eq!(
             serde_json::to_value(object).unwrap(),
             json!({
+                "description": "A referenceable struct",
                 "required": ["name", "unit"],
                 "properties": {
-                    "maybe": {"type": "integer", "format": "uint32", "minimum": 0.0, "nullable": true},
+                    "maybe": {"type": "integer", "format": "uint32", "minimum": 0, "nullable": true},
                     "name": {"description": "Some name", "type": "string"},
                     "unit": {"nullable": true}
                 }

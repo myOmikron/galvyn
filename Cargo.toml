@@ -51,7 +51,7 @@ tokio = { version = ">=1.47.0", default-features = false } # Version required fo
 # Underlying web framework
 axum = { version = "~0.8", default-features = false }
 # Provides json-schema which are used to generate the openapi definitions
-schemars = { version = "~0.8", default-features = false }
+schemars = { version = "~1", default-features = false }
 
 # HTTP client
 reqwest = { version = "~0.13", default-features = false, features = ["rustls"] }

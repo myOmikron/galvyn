@@ -3,6 +3,7 @@ use std::mem;
 use axum::http::Method;
 use galvyn_core::handler::context::EndpointContext;
 use galvyn_core::re_exports::schemars;
+use galvyn_core::re_exports::serde::Deserialize;
 use galvyn_core::router::GalvynRoute;
 use galvyn_core::schema_generator::SchemaGenerator;
 use openapiv3::Components;
@@ -104,7 +105,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
                 let Some(schema) = schema else {
                     continue;
                 };
-                let schema = match convert_schema(&schema) {
+                let schema = match convert_schema(schema.to_value()) {
                     Ok(schema) => schema,
                     Err(error) => {
                         warn!(
@@ -158,26 +159,28 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
                 content: FromIterator::from_iter([(
                     mime.to_string(),
                     MediaType {
-                        schema: schema.as_ref().map(convert_schema).and_then(|result| {
-                            result
-                                .inspect_err(|error| {
-                                    warn!(
-                                        route.handler.ident,
-                                        route.path,
-                                        reason = "Schema is not proper openapiv3",
-                                        "Malformed request body schema"
-                                    );
-                                    debug!(
-                                        route.handler.ident,
-                                        route.path,
-                                        reason = "Schema is not proper openapiv3",
-                                        error.display = %error,
-                                        error.debug = ?error,
-                                        "Malformed request body schema"
-                                    );
-                                })
-                                .ok()
-                        }),
+                        schema: schema
+                            .map(|x| convert_schema(x.to_value()))
+                            .and_then(|result| {
+                                result
+                                    .inspect_err(|error| {
+                                        warn!(
+                                            route.handler.ident,
+                                            route.path,
+                                            reason = "Schema is not proper openapiv3",
+                                            "Malformed request body schema"
+                                        );
+                                        debug!(
+                                            route.handler.ident,
+                                            route.path,
+                                            reason = "Schema is not proper openapiv3",
+                                            error.display = %error,
+                                            error.debug = ?error,
+                                            "Malformed request body schema"
+                                        );
+                                    })
+                                    .ok()
+                            }),
                         ..Default::default()
                     },
                 )]),
@@ -259,7 +262,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
         components: Some(Components {
             schemas: schemas
                 .into_definitions()
-                .iter()
+                .into_iter()
                 .filter_map(|(key, schema)| match convert_schema(schema) {
                     Ok(schema) => Some((key.clone(), schema)),
                     Err(error) => {
@@ -290,7 +293,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
 
 fn convert_parameter(
     name: String,
-    schema: Option<schemars::schema::Schema>,
+    schema: Option<schemars::Schema>,
     route: &GalvynRoute,
 ) -> ParameterData {
     ParameterData {
@@ -300,7 +303,7 @@ fn convert_parameter(
         deprecated: None,
         format: ParameterSchemaOrContent::Schema(
             schema
-                .and_then(|schema| match convert_schema(&schema) {
+                .and_then(|schema| match convert_schema(schema.to_value()) {
                     Ok(schema) => Some(schema),
                     Err(error) => {
                         warn!(
@@ -334,10 +337,8 @@ fn convert_parameter(
     }
 }
 
-fn convert_schema(
-    schema: &schemars::schema::Schema,
-) -> Result<ReferenceOr<Schema>, serde_json::Error> {
-    serde_json::to_string(schema).and_then(|string| serde_json::from_str(&string))
+fn convert_schema(schema: serde_json::Value) -> Result<ReferenceOr<Schema>, serde_json::Error> {
+    Deserialize::deserialize(schema)
 }
 
 #[cfg(test)]
@@ -354,8 +355,9 @@ mod tests {
 
     use super::*;
 
-    fn convert(schema: &schemars::schema::Schema) -> Result<Value, serde_json::Error> {
-        convert_schema(schema).map(|schema| serde_json::to_value(schema).unwrap())
+    fn convert(schema: &schemars::Schema) -> Result<Value, serde_json::Error> {
+        convert_schema(schema.clone().to_value())
+            .map(|schema| serde_json::to_value(schema).unwrap())
     }
 
     #[test]
@@ -386,13 +388,13 @@ mod tests {
                         "description": "The limit this page was requested with",
                         "type": "integer",
                         "format": "uint64",
-                        "minimum": 0.0
+                        "minimum": 0
                     },
                     "offset": {
                         "description": "The offset this page was requested with",
                         "type": "integer",
                         "format": "uint64",
-                        "minimum": 0.0
+                        "minimum": 0
                     },
                     "total": {
                         "description": "The total number of items this page is a subset of",
@@ -452,7 +454,7 @@ mod tests {
                     },
                     {
                         "type": "object",
-                        "required": ["error", "result"],
+                        "required": ["result", "error"],
                         "properties": {
                             "error": {"$ref": "#/components/schemas/SingleLink"},
                             "result": {"type": "string", "enum": ["Err"]}
@@ -477,8 +479,8 @@ mod tests {
     /// They are currently rejected and dropped by `generate_openapi`.
     #[test]
     fn convert_bool_schema_fails() {
-        assert!(convert(&schemars::schema::Schema::Bool(true)).is_err());
-        assert!(convert(&schemars::schema::Schema::Bool(false)).is_err());
+        assert!(convert(&schemars::Schema::from(true)).is_err());
+        assert!(convert(&schemars::Schema::from(false)).is_err());
     }
 
     #[test]
@@ -488,6 +490,7 @@ mod tests {
         generator.generate::<FormResult<SingleUuid, SingleLink>>();
         generator.generate::<Optional<SchemaDateTime>>();
         generator.generate::<Page<SingleUuid>>();
+        generator.generate::<Page<SingleLink>>();
 
         let definitions = generator.into_definitions();
         let mut keys: Vec<_> = definitions.keys().map(String::as_str).collect();
@@ -499,14 +502,15 @@ mod tests {
                 "FormErrorResponse_for_SingleLink",
                 "FormResult_for_SingleUuid_and_SingleLink",
                 "Optional_for_SchemaDateTime",
+                "Page_for_SingleLink",
                 "Page_for_SingleUuid",
                 "SchemaDateTime",
                 "SingleLink",
                 "SingleUuid",
             ]
         );
-        for (key, schema) in &definitions {
-            if let Err(error) = convert(schema) {
+        for (key, schema) in definitions {
+            if let Err(error) = convert_schema(schema) {
                 panic!("Failed to convert {key}: {error}");
             }
         }

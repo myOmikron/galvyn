@@ -11,7 +11,7 @@ use galvyn_core::re_exports::mime::Mime;
 use galvyn_core::re_exports::rorm;
 use galvyn_core::stuff::api_error::core::CoreApiError;
 use galvyn_core::stuff::api_json::ApiJson;
-use schemars::schema::Schema;
+use schemars::Schema;
 use serde::Serialize;
 use tracing::info;
 use url::Url;

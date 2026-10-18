@@ -20,9 +20,7 @@ use bytes::buf::Chain;
 use mime::Mime;
 use regex::Regex;
 use schemars::JsonSchema;
-use schemars::schema::InstanceType;
-use schemars::schema::Schema;
-use schemars::schema::SingleOrVec;
+use schemars::Schema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use tracing::warn;
@@ -34,6 +32,7 @@ use super::request_part::ShouldBeRequestPart;
 use crate::handler::context::EndpointContext;
 use crate::handler::response_body::ResponseBody;
 use crate::handler::response_body::ShouldBeResponseBody;
+use crate::schema_generator::SchemaExt;
 
 impl ShouldBeRequestBody for String {}
 impl RequestBody for String {
@@ -61,14 +60,16 @@ impl<T> ShouldBeRequestBody for Form<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestBody for Form<T> {
     fn query_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
         if ctx.method == Method::GET {
-            let Some(obj) = ctx.generator.generate_object::<T>() else {
-                warn!("Unsupported handler argument: {}", type_name::<Self>());
-                return Vec::new();
-            };
+            let properties = ctx
+                .generator
+                .generate_refless::<T>()
+                .get_owned("properties")
+                .and_then(|x| x.to_object())
+                .unwrap_or_default();
 
-            obj.properties
+            properties
                 .into_iter()
-                .map(|(name, schema)| (name, Some(schema)))
+                .map(|(name, schema)| (name, Schema::try_from(schema).ok()))
                 .collect()
         } else {
             vec![]
@@ -113,10 +114,7 @@ static PATH_PARAM_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{[^}]*
 impl<T> ShouldBeRequestPart for Path<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
     fn path_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
-        let Schema::Object(schema) = ctx.generator.generate_refless::<T>() else {
-            warn!(type = type_name::<T>(), "Failed to generate schema, this should never happen!");
-            return Vec::new();
-        };
+        let schema = ctx.generator.generate_refless::<T>();
 
         let mut unhandled_params: Vec<_> = PATH_PARAM_REGEX
             .find_iter(ctx.path)
@@ -124,43 +122,37 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
             .collect();
         let mut handled_params = Vec::new();
 
-        match &schema.instance_type {
-            Some(SingleOrVec::Single(boxed)) if **boxed == InstanceType::Object => {
-                let object = schema.object.unwrap_or_else(|| {
-                    warn!("Unsupported handler argument: {}", type_name::<Self>());
-                    Default::default()
-                });
+        match schema.get("type").and_then(|x| x.as_str()) {
+            Some("object") => {
+                let properties = schema
+                    .get_owned("properties")
+                    .and_then(|x| x.to_object())
+                    .unwrap_or_default();
 
                 handled_params.extend(
-                    object
-                        .properties
+                    properties
                         .into_iter()
-                        .map(|(name, schema)| (name, Some(schema))),
+                        .map(|(name, schema)| (name, Schema::try_from(schema).ok())),
                 );
 
                 for (key, _) in &handled_params {
                     unhandled_params.retain_mut(|path_key| path_key != key);
                 }
             }
-            Some(SingleOrVec::Single(boxed)) if **boxed == InstanceType::Array => {
-                let array = schema.array.unwrap_or_else(|| {
-                    warn!("Unsupported handler argument: {}", type_name::<Self>());
-                    Default::default()
-                });
-                let items = array.items.unwrap_or_else(|| {
-                    warn!("Unsupported handler argument: {}", type_name::<Self>());
-                    SingleOrVec::Vec(Vec::new())
-                });
+            Some("array") => {
+                let items = schema
+                    .get_owned("items")
+                    .unwrap_or(serde_json::Value::Array(Vec::new()));
 
                 match items {
-                    SingleOrVec::Single(item) => {
+                    serde_json::Value::Object(item) => {
                         handled_params.extend(
                             unhandled_params
                                 .drain(..)
-                                .map(|key| (key.to_string(), Some(item.as_ref().clone()))),
+                                .map(|key| (key.to_string(), Some(Schema::from(item.clone())))),
                         );
                     }
-                    SingleOrVec::Vec(items) => {
+                    serde_json::Value::Array(items) => {
                         if items.len() > unhandled_params.len() {
                             warn!(
                                 schema = type_name::<Self>(),
@@ -174,12 +166,17 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
                             unhandled_params
                                 .drain(..items.len().min(unhandled_params.len()))
                                 .zip(items)
-                                .map(|(key, schema)| (key.to_string(), Some(schema))),
+                                .map(|(key, schema)| {
+                                    (key.to_string(), Schema::try_from(schema).ok())
+                                }),
                         );
+                    }
+                    _ => {
+                        warn!("Unsupported handler argument: {}", type_name::<Self>());
                     }
                 }
             }
-            Some(SingleOrVec::Single(_)) => {
+            Some(_) => {
                 if unhandled_params.is_empty() {
                     warn!(
                         schema = type_name::<Self>(),
@@ -187,10 +184,7 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
                         "Missing path parameter",
                     );
                 } else {
-                    handled_params.push((
-                        unhandled_params.remove(0).to_string(),
-                        Some(Schema::Object(schema)),
-                    ));
+                    handled_params.push((unhandled_params.remove(0).to_string(), Some(schema)));
                 }
             }
             _ => {
@@ -217,14 +211,16 @@ impl<T: DeserializeOwned + JsonSchema> RequestPart for Path<T> {
 impl<T> ShouldBeRequestPart for Query<T> {}
 impl<T: DeserializeOwned + JsonSchema> RequestPart for Query<T> {
     fn query_parameters(ctx: &mut EndpointContext) -> Vec<(String, Option<Schema>)> {
-        let Some(obj) = ctx.generator.generate_object::<T>() else {
-            warn!("Unsupported handler argument: {}", type_name::<Self>());
-            return Vec::new();
-        };
+        let properties = ctx
+            .generator
+            .generate_refless::<T>()
+            .get_owned("properties")
+            .and_then(|x| x.to_object())
+            .unwrap_or_default();
 
-        obj.properties
+        properties
             .into_iter()
-            .map(|(name, schema)| (name, Some(schema)))
+            .map(|(name, schema)| (name, Schema::try_from(schema).ok()))
             .collect()
     }
 }
@@ -418,7 +414,7 @@ mod tests {
     use axum::extract::Query;
     use axum::http::Method;
     use schemars::JsonSchema;
-    use schemars::schema::Schema;
+    use schemars::Schema;
     use serde::Deserialize;
     use serde_json::Value;
     use serde_json::json;
@@ -468,7 +464,7 @@ mod tests {
     }
 
     fn u32_json() -> Value {
-        json!({"type": "integer", "format": "uint32", "minimum": 0.0})
+        json!({"type": "integer", "format": "uint32", "minimum": 0})
     }
 
     fn nullable_string_json() -> Value {

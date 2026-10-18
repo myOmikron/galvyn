@@ -9,7 +9,7 @@ use rorm::Model;
 use rorm::and;
 use rorm::db::transaction::TransactionError;
 use rorm::fields::types::Json;
-use schemars::_serde_json::Value;
+use serde_json::Value;
 use thiserror::Error;
 use tower_sessions::ExpiredDeletion;
 use tower_sessions::Expiry;

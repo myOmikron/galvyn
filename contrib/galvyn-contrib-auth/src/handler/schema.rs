@@ -50,27 +50,27 @@ pub struct LoginLocalPasswordRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestChallengeResponse(pub webauthn_rs::prelude::RequestChallengeResponse);
 impl JsonSchema for RequestChallengeResponse {
-    fn schema_name() -> String {
-        "PublicKeyCredential".to_owned()
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("PublicKeyCredential")
     }
     fn schema_id() -> std::borrow::Cow<'static, str> {
         Cow::Borrowed(concat!(module_path!(), "::", "PublicKeyCredential"))
     }
-    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::Schema::Bool(true)
+    fn json_schema(_gen: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::Schema::from(true)
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicKeyCredential(pub webauthn_rs::prelude::PublicKeyCredential);
 impl JsonSchema for PublicKeyCredential {
-    fn schema_name() -> String {
-        "PublicKeyCredential".to_owned()
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("PublicKeyCredential")
     }
     fn schema_id() -> std::borrow::Cow<'static, str> {
         Cow::Borrowed(concat!(module_path!(), "::", "PublicKeyCredential"))
     }
-    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::Schema::Bool(true)
+    fn json_schema(_gen: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::Schema::from(true)
     }
 }

@@ -11,7 +11,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use schemars::JsonSchema;
-use schemars::schema::Schema;
+use schemars::Schema;
 use serde::Serialize;
 
 pub use self::aggregator::FormErrors;

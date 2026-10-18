@@ -3,14 +3,11 @@
 use std::borrow::Cow;
 
 use schemars::JsonSchema;
-use schemars::r#gen::SchemaGenerator;
-use schemars::schema::InstanceType;
-use schemars::schema::Metadata;
-use schemars::schema::Schema;
-use schemars::schema::SchemaObject;
+use schemars::Schema;
+use schemars::SchemaGenerator;
+use schemars::json_schema;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::json;
 use time::Date;
 use time::OffsetDateTime;
 use time::Time;
@@ -154,11 +151,11 @@ impl<T, E> FormResult<T, E> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct SchemaString<T>(pub T);
 impl<T> JsonSchema for SchemaString<T> {
-    fn is_referenceable() -> bool {
-        <String as JsonSchema>::is_referenceable()
+    fn inline_schema() -> bool {
+        <String as JsonSchema>::inline_schema()
     }
 
-    fn schema_name() -> String {
+    fn schema_name() -> Cow<'static, str> {
         <String as JsonSchema>::schema_name()
     }
 
@@ -192,12 +189,12 @@ pub struct SchemaDate(#[serde(with = "rfc3339_date")] pub Date);
 macro_rules! formatted_string_impl {
     ($ty:ident, format: $format:literal, example: $example:literal) => {
         impl JsonSchema for $ty {
-            fn is_referenceable() -> bool {
-                true
+            fn inline_schema() -> bool {
+                false
             }
 
-            fn schema_name() -> String {
-                stringify!($ty).to_owned()
+            fn schema_name() -> Cow<'static, str> {
+                Cow::Borrowed(stringify!($ty))
             }
 
             fn schema_id() -> Cow<'static, str> {
@@ -205,16 +202,11 @@ macro_rules! formatted_string_impl {
             }
 
             fn json_schema(_: &mut SchemaGenerator) -> Schema {
-                SchemaObject {
-                    instance_type: Some(InstanceType::String.into()),
-                    format: Some($format.to_owned()),
-                    metadata: Some(Box::new(Metadata {
-                        examples: vec![json!($example)],
-                        ..Default::default()
-                    })),
-                    ..Default::default()
-                }
-                .into()
+                json_schema!({
+                    "type": "string",
+                    "format": $format,
+                    "examples": [$example],
+                })
             }
         }
     };
@@ -313,7 +305,7 @@ mod tests {
             json!({
                 "description": "The response that is sent in a case of an error the caller should present his user",
                 "type": "object",
-                "required": ["error", "result"],
+                "required": ["result", "error"],
                 "properties": {
                     "error": {
                         "description": "The actual error struct",
@@ -366,7 +358,7 @@ mod tests {
                     },
                     {
                         "type": "object",
-                        "required": ["error", "result"],
+                        "required": ["result", "error"],
                         "properties": {
                             "error": {"$ref": "#/components/schemas/SingleLink"},
                             "result": {"type": "string", "enum": ["Err"]}
@@ -384,7 +376,7 @@ mod tests {
             schema_to_json(&generator.generate_refless::<Optional<SingleUuid>>()),
             json!({
                 "title": "Optional",
-                "description": "A single field which might be `null`.\n\n## Rust Usage\n\nIf you want to return an `ApiJson<Option<T>>` from your handler, please use `ApiJson<Optional<T>>` instead.\n\nIt simply wraps the option into a struct with a single field to ensure the json returned from a handler is always an object.",
+                "description": "A single field which might be `null`.\n\n## Rust Usage\n\nIf you want to return an `ApiJson<Option<T>>` from your handler,\nplease use `ApiJson<Optional<T>>` instead.\n\nIt simply wraps the option into a struct with a single field\nto ensure the json returned from a handler is always an object.",
                 "type": "object",
                 "properties": {
                     "optional": {
@@ -415,13 +407,13 @@ mod tests {
                         "description": "The limit this page was requested with",
                         "type": "integer",
                         "format": "uint64",
-                        "minimum": 0.0
+                        "minimum": 0
                     },
                     "offset": {
                         "description": "The offset this page was requested with",
                         "type": "integer",
                         "format": "uint64",
-                        "minimum": 0.0
+                        "minimum": 0
                     },
                     "total": {
                         "description": "The total number of items this page is a subset of",

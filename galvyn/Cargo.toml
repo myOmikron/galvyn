@@ -58,7 +58,7 @@ default = [
     "opentelemetry",
     "sessions",
     "graceful-shutdown",
-    "schemars/url",
+    "schemars/url2",
 ]
 
 # Includes all contrib crates

@@ -40,7 +40,7 @@ mod axum_impls {
 mod galvyn_impls {
     use axum::http::StatusCode;
     use mime::Mime;
-    use schemars::schema::Schema;
+    use schemars::Schema;
 
     use crate::SchemalessJson;
     use crate::handler::context::EndpointContext;

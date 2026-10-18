@@ -9,7 +9,7 @@ use axum::response::Response;
 use opentelemetry::trace::TraceId;
 #[cfg(feature = "rorm")]
 use rorm::db::transaction::TransactionError;
-use schemars::schema::Schema;
+use schemars::Schema;
 use thiserror::Error;
 use tracing::debug;
 use tracing::error;

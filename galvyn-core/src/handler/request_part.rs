@@ -1,4 +1,4 @@
-use schemars::schema::Schema;
+use schemars::Schema;
 
 use crate::handler::context::EndpointContext;
 use crate::macro_utils::type_metadata::HasMetadata;

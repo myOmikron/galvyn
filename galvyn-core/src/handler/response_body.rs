@@ -1,7 +1,7 @@
 use axum::http::HeaderName;
 use axum::http::StatusCode;
 use mime::Mime;
-use schemars::schema::Schema;
+use schemars::Schema;
 
 use crate::handler::context::EndpointContext;
 use crate::handler::response_part::ResponsePart;

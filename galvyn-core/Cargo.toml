@@ -46,7 +46,7 @@ bytes = { version = "~1" }
 mime = { version = "~0.3" }
 serde = { workspace = true }
 serde_json = { version = "~1" }
-schemars = { workspace = true, features = ["uuid1", "derive"] }
+schemars = { workspace = true, features = ["std", "uuid1", "derive"] }
 tower = { version = "~0.5" }
 regex = { version = "~1" }
 thiserror = { workspace = true }

@@ -8,7 +8,7 @@ use axum::http::HeaderValue;
 use axum::http::StatusCode;
 use axum::http::header;
 use axum::response::IntoResponse;
-use schemars::schema::Schema;
+use schemars::Schema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
