@@ -224,3 +224,212 @@ formatted_string_impl!(SchemaTime, format: "partial-date-time", example: "00:00:
 formatted_string_impl!(SchemaDate, format: "date", example: "1970-01-01");
 
 format_description!(rfc3339_date, Date, "[year]-[month]-[day]");
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use uuid::Uuid;
+
+    use super::*;
+    use crate::schema_generator::SchemaGenerator;
+    use crate::schema_generator::schema_to_json;
+
+    #[test]
+    fn formatted_strings() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<SchemaDateTime>()),
+            json!({"type": "string", "format": "date-time", "example": "1970-01-01T00:00:00.0Z"})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<SchemaTime>()),
+            json!({"type": "string", "format": "partial-date-time", "example": "00:00:00.0"})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<SchemaDate>()),
+            json!({"type": "string", "format": "date", "example": "1970-01-01"})
+        );
+    }
+
+    #[test]
+    fn formatted_strings_are_referenceable() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<SchemaDateTime>()),
+            json!({"$ref": "#/components/schemas/SchemaDateTime"})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<SchemaTime>()),
+            json!({"$ref": "#/components/schemas/SchemaTime"})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<SchemaDate>()),
+            json!({"$ref": "#/components/schemas/SchemaDate"})
+        );
+
+        let definitions = generator.into_definitions();
+        assert_eq!(
+            schema_to_json(&definitions["SchemaDateTime"]),
+            json!({"type": "string", "format": "date-time", "example": "1970-01-01T00:00:00.0Z"})
+        );
+        assert_eq!(
+            schema_to_json(&definitions["SchemaTime"]),
+            json!({"type": "string", "format": "partial-date-time", "example": "00:00:00.0"})
+        );
+        assert_eq!(
+            schema_to_json(&definitions["SchemaDate"]),
+            json!({"type": "string", "format": "date", "example": "1970-01-01"})
+        );
+    }
+
+    #[test]
+    fn schema_string() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<SchemaString<Uuid>>()),
+            schema_to_json(&generator.generate::<String>()),
+        );
+        assert!(generator.into_definitions().is_empty());
+    }
+
+    #[test]
+    fn error_constant() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<ErrorConstant>()),
+            json!({
+                "description": "Constant string `\"Err\"` which is documented by schemars",
+                "type": "string",
+                "enum": ["Err"]
+            })
+        );
+    }
+
+    #[test]
+    fn form_error_response() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<FormErrorResponse<SingleLink>>()),
+            json!({
+                "description": "The response that is sent in a case of an error the caller should present his user",
+                "type": "object",
+                "required": ["error", "result"],
+                "properties": {
+                    "error": {
+                        "description": "The actual error struct",
+                        "allOf": [{"$ref": "#/components/schemas/SingleLink"}]
+                    },
+                    "result": {
+                        "description": "A constant `\"Err\"` used to differentiate this schema from any other \"Ok\" schema",
+                        "allOf": [{"$ref": "#/components/schemas/ErrorConstant"}]
+                    }
+                }
+            })
+        );
+
+        let definitions = generator.into_definitions();
+        assert_eq!(definitions.len(), 2);
+        assert_eq!(
+            schema_to_json(&definitions["SingleLink"]),
+            json!({
+                "description": "A single string representing a link wrapped in a struct",
+                "type": "object",
+                "required": ["link"],
+                "properties": {"link": {"type": "string"}}
+            })
+        );
+        assert_eq!(
+            schema_to_json(&definitions["ErrorConstant"]),
+            json!({
+                "description": "Constant string `\"Err\"` which is documented by schemars",
+                "type": "string",
+                "enum": ["Err"]
+            })
+        );
+    }
+
+    #[test]
+    fn form_result() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<FormResult<SingleUuid, SingleLink>>()),
+            json!({
+                "description": "A `Result` with a custom serialization",
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "required": ["result", "value"],
+                        "properties": {
+                            "result": {"type": "string", "enum": ["Ok"]},
+                            "value": {"$ref": "#/components/schemas/SingleUuid"}
+                        }
+                    },
+                    {
+                        "type": "object",
+                        "required": ["error", "result"],
+                        "properties": {
+                            "error": {"$ref": "#/components/schemas/SingleLink"},
+                            "result": {"type": "string", "enum": ["Err"]}
+                        }
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn optional() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<Optional<SingleUuid>>()),
+            json!({
+                "title": "Optional",
+                "description": "A single field which might be `null`.\n\n## Rust Usage\n\nIf you want to return an `ApiJson<Option<T>>` from your handler, please use `ApiJson<Optional<T>>` instead.\n\nIt simply wraps the option into a struct with a single field to ensure the json returned from a handler is always an object.",
+                "type": "object",
+                "properties": {
+                    "optional": {
+                        "allOf": [{"$ref": "#/components/schemas/SingleUuid"}],
+                        "nullable": true
+                    }
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn page() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<Page<SingleUuid>>()),
+            json!({
+                "description": "A page of items",
+                "type": "object",
+                "required": ["items", "limit", "offset", "total"],
+                "properties": {
+                    "items": {
+                        "description": "The page's items",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/SingleUuid"}
+                    },
+                    "limit": {
+                        "description": "The limit this page was requested with",
+                        "type": "integer",
+                        "format": "uint64",
+                        "minimum": 0.0
+                    },
+                    "offset": {
+                        "description": "The offset this page was requested with",
+                        "type": "integer",
+                        "format": "uint64",
+                        "minimum": 0.0
+                    },
+                    "total": {
+                        "description": "The total number of items this page is a subset of",
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            })
+        );
+    }
+}

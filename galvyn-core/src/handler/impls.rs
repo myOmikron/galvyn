@@ -411,3 +411,150 @@ impl<T> ResponseBody for Html<T> {
         vec![(StatusCode::OK, Some((mime::TEXT_HTML_UTF_8, None)))]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::extract::Path;
+    use axum::extract::Query;
+    use axum::http::Method;
+    use schemars::JsonSchema;
+    use schemars::schema::Schema;
+    use serde::Deserialize;
+    use serde_json::Value;
+    use serde_json::json;
+    use uuid::Uuid;
+
+    use crate::handler::context::EndpointContext;
+    use crate::handler::request_part::RequestPart;
+    use crate::schema_generator::SchemaGenerator;
+    use crate::schema_generator::schema_to_json;
+
+    #[derive(Deserialize, JsonSchema)]
+    #[allow(dead_code)]
+    struct XY {
+        x: u32,
+        y: Option<String>,
+    }
+
+    #[derive(Deserialize, JsonSchema)]
+    #[allow(dead_code)]
+    struct OnlyX {
+        x: u32,
+    }
+
+    const PATH: &str = "/a/{x}/{y}";
+
+    fn path_params<T: RequestPart>(path: &str) -> Vec<(String, Option<Value>)> {
+        let mut generator = SchemaGenerator::new();
+        let mut ctx = EndpointContext::_new(&mut generator, &Method::GET, path);
+        params_to_json(T::path_parameters(&mut ctx))
+    }
+
+    fn query_params<T: RequestPart>() -> Vec<(String, Option<Value>)> {
+        let mut generator = SchemaGenerator::new();
+        let mut ctx = EndpointContext::_new(&mut generator, &Method::GET, PATH);
+        params_to_json(T::query_parameters(&mut ctx))
+    }
+
+    fn params_to_json(params: Vec<(String, Option<Schema>)>) -> Vec<(String, Option<Value>)> {
+        params
+            .into_iter()
+            .map(|(name, schema)| (name, schema.as_ref().map(schema_to_json)))
+            .collect()
+    }
+
+    fn param(name: &str, schema: Option<Value>) -> (String, Option<Value>) {
+        (name.to_string(), schema)
+    }
+
+    fn u32_json() -> Value {
+        json!({"type": "integer", "format": "uint32", "minimum": 0.0})
+    }
+
+    fn nullable_string_json() -> Value {
+        json!({"type": "string", "nullable": true})
+    }
+
+    #[test]
+    fn path_struct() {
+        assert_eq!(
+            path_params::<Path<XY>>(PATH),
+            vec![
+                param("x", Some(u32_json())),
+                param("y", Some(nullable_string_json())),
+            ]
+        );
+    }
+
+    #[test]
+    fn path_struct_ignores_missing_path_params() {
+        // Objects don't check whether their fields appear in the path
+        assert_eq!(
+            path_params::<Path<XY>>("/a"),
+            vec![
+                param("x", Some(u32_json())),
+                param("y", Some(nullable_string_json())),
+            ]
+        );
+    }
+
+    #[test]
+    fn path_struct_missing_field() {
+        assert_eq!(
+            path_params::<Path<OnlyX>>(PATH),
+            vec![param("x", Some(u32_json())), param("y", None)]
+        );
+    }
+
+    #[test]
+    fn path_tuple() {
+        assert_eq!(
+            path_params::<Path<(Uuid, u32)>>(PATH),
+            vec![
+                param("x", Some(json!({"type": "string", "format": "uuid"}))),
+                param("y", Some(u32_json())),
+            ]
+        );
+    }
+
+    #[test]
+    fn path_vec() {
+        assert_eq!(
+            path_params::<Path<Vec<String>>>(PATH),
+            vec![
+                param("x", Some(json!({"type": "string"}))),
+                param("y", Some(json!({"type": "string"}))),
+            ]
+        );
+        assert_eq!(path_params::<Path<Vec<String>>>("/a"), vec![]);
+    }
+
+    #[test]
+    fn path_scalar() {
+        assert_eq!(
+            path_params::<Path<Uuid>>(PATH),
+            vec![
+                param("x", Some(json!({"type": "string", "format": "uuid"}))),
+                param("y", None),
+            ]
+        );
+        assert_eq!(path_params::<Path<Uuid>>("/a"), vec![]);
+    }
+
+    #[test]
+    fn query_struct() {
+        assert_eq!(
+            query_params::<Query<XY>>(),
+            vec![
+                param("x", Some(u32_json())),
+                param("y", Some(nullable_string_json())),
+            ]
+        );
+    }
+
+    #[test]
+    fn query_non_object() {
+        assert_eq!(query_params::<Query<String>>(), vec![]);
+        assert_eq!(query_params::<Query<Vec<String>>>(), vec![]);
+    }
+}

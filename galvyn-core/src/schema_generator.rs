@@ -110,3 +110,196 @@ impl Visitor for ReplaceNullType {
         visit_schema_object(self, schema);
     }
 }
+
+/// Converts a schema into plain json
+///
+/// Tests should only compare schemas through this function
+/// to be independent of `schemars`' internal representation.
+#[cfg(test)]
+pub(crate) fn schema_to_json(schema: &Schema) -> Value {
+    serde_json::to_value(schema).expect("Schemas should always be serializable")
+}
+
+#[cfg(test)]
+mod tests {
+    use schemars::JsonSchema;
+    use serde_json::json;
+
+    use super::SchemaGenerator;
+    use super::schema_to_json;
+
+    /// A referenceable struct
+    #[derive(JsonSchema)]
+    #[allow(dead_code)]
+    struct Refd {
+        /// Some name
+        name: String,
+        maybe: Option<u32>,
+        unit: (),
+    }
+
+    #[derive(JsonSchema)]
+    #[serde(untagged)]
+    #[allow(dead_code)]
+    enum Untagged {
+        Num(u32),
+        Nothing,
+    }
+
+    #[derive(JsonSchema)]
+    #[allow(dead_code)]
+    enum Plain {
+        A,
+        B,
+    }
+
+    fn refd_json() -> serde_json::Value {
+        json!({
+            "description": "A referenceable struct",
+            "type": "object",
+            "required": ["name", "unit"],
+            "properties": {
+                "maybe": {"type": "integer", "format": "uint32", "minimum": 0.0, "nullable": true},
+                "name": {"description": "Some name", "type": "string"},
+                "unit": {"nullable": true}
+            }
+        })
+    }
+
+    #[test]
+    fn generate_struct_is_ref() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<Refd>()),
+            json!({"$ref": "#/components/schemas/Refd"})
+        );
+
+        let definitions = generator.into_definitions();
+        assert_eq!(definitions.len(), 1);
+        assert_eq!(schema_to_json(&definitions["Refd"]), refd_json());
+    }
+
+    #[test]
+    fn generate_refless_struct_is_inline() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<Refd>()),
+            refd_json()
+        );
+        assert!(generator.into_definitions().is_empty());
+    }
+
+    #[test]
+    fn generate_primitives() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<String>()),
+            json!({"type": "string"})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<u64>()),
+            json!({"type": "integer", "format": "uint64", "minimum": 0.0})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<Vec<String>>()),
+            json!({"type": "array", "items": {"type": "string"}})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<(uuid::Uuid, u32)>()),
+            json!({
+                "type": "array",
+                "items": [
+                    {"type": "string", "format": "uuid"},
+                    {"type": "integer", "format": "uint32", "minimum": 0.0}
+                ],
+                "maxItems": 2,
+                "minItems": 2
+            })
+        );
+        assert!(generator.into_definitions().is_empty());
+    }
+
+    #[test]
+    fn null_type_is_replaced_by_nullable() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<()>()),
+            json!({"nullable": true})
+        );
+    }
+
+    #[test]
+    fn option_is_nullable() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate::<Option<String>>()),
+            json!({"type": "string", "nullable": true})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<Option<u64>>()),
+            json!({"type": "integer", "format": "uint64", "minimum": 0.0, "nullable": true})
+        );
+        assert_eq!(
+            schema_to_json(&generator.generate::<Option<Refd>>()),
+            json!({"allOf": [{"$ref": "#/components/schemas/Refd"}], "nullable": true})
+        );
+    }
+
+    #[test]
+    fn null_type_in_untagged_enum() {
+        let mut generator = SchemaGenerator::new();
+        let expected = json!({
+            "anyOf": [
+                {"type": "integer", "format": "uint32", "minimum": 0.0},
+                {"nullable": true}
+            ]
+        });
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<Untagged>()),
+            expected
+        );
+
+        assert_eq!(
+            schema_to_json(&generator.generate::<Untagged>()),
+            json!({"$ref": "#/components/schemas/Untagged"})
+        );
+        let definitions = generator.into_definitions();
+        assert_eq!(schema_to_json(&definitions["Untagged"]), expected);
+    }
+
+    #[test]
+    fn null_type_is_replaced_in_definitions() {
+        let mut generator = SchemaGenerator::new();
+        generator.generate::<Option<Refd>>();
+        let definitions = generator.into_definitions();
+        assert_eq!(schema_to_json(&definitions["Refd"]), refd_json());
+    }
+
+    #[test]
+    fn generate_object_for_struct() {
+        let mut generator = SchemaGenerator::new();
+        let object = generator
+            .generate_object::<Refd>()
+            .expect("Refd is an object");
+        assert_eq!(
+            serde_json::to_value(object).unwrap(),
+            json!({
+                "required": ["name", "unit"],
+                "properties": {
+                    "maybe": {"type": "integer", "format": "uint32", "minimum": 0.0, "nullable": true},
+                    "name": {"description": "Some name", "type": "string"},
+                    "unit": {"nullable": true}
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn generate_object_for_non_objects() {
+        let mut generator = SchemaGenerator::new();
+        assert!(generator.generate_object::<String>().is_none());
+        assert!(generator.generate_object::<Vec<String>>().is_none());
+        assert!(generator.generate_object::<Plain>().is_none());
+        assert!(generator.generate_object::<Option<Refd>>().is_none());
+    }
+}

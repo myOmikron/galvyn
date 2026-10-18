@@ -339,3 +339,176 @@ fn convert_schema(
 ) -> Result<ReferenceOr<Schema>, serde_json::Error> {
     serde_json::to_string(schema).and_then(|string| serde_json::from_str(&string))
 }
+
+#[cfg(test)]
+mod tests {
+    use galvyn_core::stuff::schema::FormErrorResponse;
+    use galvyn_core::stuff::schema::FormResult;
+    use galvyn_core::stuff::schema::Optional;
+    use galvyn_core::stuff::schema::Page;
+    use galvyn_core::stuff::schema::SchemaDateTime;
+    use galvyn_core::stuff::schema::SingleLink;
+    use galvyn_core::stuff::schema::SingleUuid;
+    use serde_json::json;
+    use serde_json::Value;
+
+    use super::*;
+
+    fn convert(schema: &schemars::schema::Schema) -> Result<Value, serde_json::Error> {
+        convert_schema(schema).map(|schema| serde_json::to_value(schema).unwrap())
+    }
+
+    #[test]
+    fn convert_ref() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            convert(&generator.generate::<SingleUuid>()).unwrap(),
+            json!({"$ref": "#/components/schemas/SingleUuid"})
+        );
+    }
+
+    #[test]
+    fn convert_struct() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            convert(&generator.generate_refless::<Page<SingleUuid>>()).unwrap(),
+            json!({
+                "description": "A page of items",
+                "type": "object",
+                "required": ["items", "limit", "offset", "total"],
+                "properties": {
+                    "items": {
+                        "description": "The page's items",
+                        "type": "array",
+                        "items": {"$ref": "#/components/schemas/SingleUuid"}
+                    },
+                    "limit": {
+                        "description": "The limit this page was requested with",
+                        "type": "integer",
+                        "format": "uint64",
+                        "minimum": 0.0
+                    },
+                    "offset": {
+                        "description": "The offset this page was requested with",
+                        "type": "integer",
+                        "format": "uint64",
+                        "minimum": 0.0
+                    },
+                    "total": {
+                        "description": "The total number of items this page is a subset of",
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn convert_nullable() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            convert(&generator.generate::<Option<String>>()).unwrap(),
+            json!({"type": "string", "nullable": true})
+        );
+        assert_eq!(
+            convert(&generator.generate::<Option<SingleUuid>>()).unwrap(),
+            json!({"allOf": [{"$ref": "#/components/schemas/SingleUuid"}], "nullable": true})
+        );
+        assert_eq!(
+            convert(&generator.generate::<()>()).unwrap(),
+            json!({"nullable": true})
+        );
+        assert_eq!(
+            convert(&generator.generate_refless::<Optional<()>>()).unwrap()["properties"],
+            json!({"optional": {"nullable": true}})
+        );
+    }
+
+    #[test]
+    fn convert_formatted_string() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            convert(&generator.generate_refless::<SchemaDateTime>()).unwrap(),
+            json!({"type": "string", "format": "date-time", "example": "1970-01-01T00:00:00.0Z"})
+        );
+    }
+
+    #[test]
+    fn convert_tagged_enum() {
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            convert(&generator.generate_refless::<FormResult<SingleUuid, SingleLink>>()).unwrap(),
+            json!({
+                "description": "A `Result` with a custom serialization",
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "required": ["result", "value"],
+                        "properties": {
+                            "result": {"type": "string", "enum": ["Ok"]},
+                            "value": {"$ref": "#/components/schemas/SingleUuid"}
+                        }
+                    },
+                    {
+                        "type": "object",
+                        "required": ["error", "result"],
+                        "properties": {
+                            "error": {"$ref": "#/components/schemas/SingleLink"},
+                            "result": {"type": "string", "enum": ["Err"]}
+                        }
+                    }
+                ]
+            })
+        );
+    }
+
+    /// Openapi 3.0 doesn't support an array of `items`.
+    ///
+    /// Tuples are currently rejected and dropped by `generate_openapi`.
+    #[test]
+    fn convert_tuple_fails() {
+        let mut generator = SchemaGenerator::new();
+        assert!(convert(&generator.generate::<(String, u32)>()).is_err());
+    }
+
+    /// Bool schemas (as used by `galvyn-contrib-auth`) are not valid openapiv3 schemas.
+    ///
+    /// They are currently rejected and dropped by `generate_openapi`.
+    #[test]
+    fn convert_bool_schema_fails() {
+        assert!(convert(&schemars::schema::Schema::Bool(true)).is_err());
+        assert!(convert(&schemars::schema::Schema::Bool(false)).is_err());
+    }
+
+    #[test]
+    fn convert_definitions() {
+        let mut generator = SchemaGenerator::new();
+        generator.generate::<FormErrorResponse<SingleLink>>();
+        generator.generate::<FormResult<SingleUuid, SingleLink>>();
+        generator.generate::<Optional<SchemaDateTime>>();
+        generator.generate::<Page<SingleUuid>>();
+
+        let definitions = generator.into_definitions();
+        let mut keys: Vec<_> = definitions.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "ErrorConstant",
+                "FormErrorResponse_for_SingleLink",
+                "FormResult_for_SingleUuid_and_SingleLink",
+                "Optional_for_SchemaDateTime",
+                "Page_for_SingleUuid",
+                "SchemaDateTime",
+                "SingleLink",
+                "SingleUuid",
+            ]
+        );
+        for (key, schema) in &definitions {
+            if let Err(error) = convert(schema) {
+                panic!("Failed to convert {key}: {error}");
+            }
+        }
+    }
+}
