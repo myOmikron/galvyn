@@ -10,6 +10,7 @@ pub use self::config::Fully;
 use crate::misc::redacted::serde_impls::TRACING_SERIALIZE;
 
 pub mod config;
+mod rorm_impl;
 mod serde_impls;
 mod std_impls;
 
