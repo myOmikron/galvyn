@@ -1,9 +1,14 @@
 //! New-types to hide values from logs
 
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::panic::catch_unwind;
 use std::panic::resume_unwind;
+
+use schemars::JsonSchema;
+use schemars::SchemaGenerator;
+use schemars::schema::Schema;
 
 pub use self::config::After;
 pub use self::config::Fully;
@@ -86,5 +91,23 @@ impl Redacted<()> {
             Ok(x) => x,
             Err(x) => resume_unwind(x),
         }
+    }
+}
+
+impl<T: JsonSchema> JsonSchema for Redacted<T> {
+    fn is_referenceable() -> bool {
+        T::is_referenceable()
+    }
+
+    fn schema_id() -> Cow<'static, str> {
+        T::schema_id()
+    }
+
+    fn schema_name() -> String {
+        T::schema_name()
+    }
+
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        T::json_schema(generator)
     }
 }
