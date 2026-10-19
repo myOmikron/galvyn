@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 /// The response that is sent in a case of an error the caller should present his user
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[schemars(rename = "FormErrorResponse_for_{T}")]
 pub struct FormErrorResponse<T> {
     /// A constant `"Err"` used to differentiate this schema from any other "Ok" schema
     pub result: ErrorConstant,
@@ -69,6 +70,7 @@ pub struct SingleLink {
 /// It simply wraps the option into a struct with a single field
 /// to ensure the json returned from a handler is always an object.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
+#[schemars(rename = "Optional_for_{T}")]
 pub struct Optional<T> {
     #[allow(missing_docs)]
     pub optional: Option<T>,
@@ -97,6 +99,7 @@ impl<T> Optional<T> {
 /// It simply wraps the vector into a struct with a single field
 /// to ensure the json returned from a handler is always an object.
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[schemars(rename = "List_for_{T}")]
 pub struct List<T> {
     #[allow(missing_docs)]
     pub list: Vec<T>,
@@ -113,6 +116,7 @@ pub struct GetPageRequest {
 
 /// A page of items
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[schemars(rename = "Page_for_{T}")]
 pub struct Page<T> {
     /// The page's items
     pub items: Vec<T>,
@@ -131,6 +135,7 @@ pub struct Page<T> {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "result")]
 #[allow(missing_docs)]
+#[schemars(rename = "FormResult_for_{T}_and_{E}")]
 pub enum FormResult<T, E> {
     Ok { value: T },
     Err { error: E },
