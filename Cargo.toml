@@ -9,7 +9,7 @@ members = [
     "./contrib/galvyn-contrib-oauth",
     "./contrib/galvyn-contrib-settings",
     "./contrib/galvyn-contrib-timers",
-    "./example/blog",
+    "./example/blog", "galvyn-tracing",
 ]
 
 [workspace.dependencies]

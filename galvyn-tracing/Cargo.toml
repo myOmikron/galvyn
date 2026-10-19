@@ -1,0 +1,8 @@
+[package]
+name = "galvyn-tracing"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tracing-core = { version = "~0.1" }
+tracing = { version = "~0.1" }
