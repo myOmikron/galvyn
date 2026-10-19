@@ -2,10 +2,14 @@ use schemars::JsonSchema;
 use schemars::Schema;
 use schemars::SchemaGenerator as InnerGenerator;
 use schemars::generate::SchemaSettings;
+use schemars::transform::Transform;
+use schemars::transform::transform_subschemas;
+use serde_json::Value;
+use serde_json::json;
 
 /// State for generating schemas from types implementing [`JsonSchema`]
 ///
-/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::gen::SchemaGenerator),
+/// If you require the underlying [`SchemaGenerator` from `schemars`](schemars::SchemaGenerator),
 /// you can use [`AsRef`] and [`AsMut`] to gain access.
 pub struct SchemaGenerator(InnerGenerator);
 impl AsRef<InnerGenerator> for SchemaGenerator {
@@ -26,7 +30,9 @@ impl Default for SchemaGenerator {
 impl SchemaGenerator {
     /// Constructs a new schema generator
     pub fn new() -> Self {
-        Self(InnerGenerator::new(SchemaSettings::openapi3()))
+        Self(InnerGenerator::new(
+            SchemaSettings::openapi3().with_transform(ReplaceNullType),
+        ))
     }
 
     /// Generate an openapi schema for the type `T`
@@ -81,6 +87,62 @@ impl SchemaGenerator {
     }
 }
 
+/// Restores the representation of `null` used by `schemars` v0.8
+///
+/// `schemars` v1 represents `null` as `{"nullable": true, "enum": [null]}`
+/// and `Option<T>` (with `T` being a `$ref`) as `{"anyOf": [{"$ref": ...}, <null>]}`.
+///
+/// Both are valid openapi 3.0, but `openapi-generator` doesn't handle them well.
+/// For example, it duplicates referenced enums inline (adding a `'null'` string variant in query parameters)
+/// and drops the nullability of array items.
+///
+/// Therefore, this transform rewrites them to `{"nullable": true}`
+/// and `{"allOf": [{"$ref": ...}], "nullable": true}` respectively.
+///
+/// It has to run after `schemars`' own openapi 3.0 transforms.
+#[derive(Debug, Clone)]
+struct ReplaceNullType;
+impl Transform for ReplaceNullType {
+    fn transform(&mut self, schema: &mut Schema) {
+        transform_subschemas(self, schema);
+
+        let Some(object) = schema.as_object_mut() else {
+            return;
+        };
+
+        if object.get("nullable") == Some(&Value::Bool(true))
+            && !object.contains_key("type")
+            && object.get("enum") == Some(&json!([null]))
+        {
+            object.remove("enum");
+        }
+
+        if object.contains_key("allOf") {
+            return;
+        }
+        let Some(Value::Array(any_of)) = object.get("anyOf") else {
+            return;
+        };
+        let null = json!({"nullable": true});
+        let reference = match any_of.as_slice() {
+            [reference, other] | [other, reference] if *other == null && is_ref(reference) => {
+                reference.clone()
+            }
+            _ => return,
+        };
+        object.remove("anyOf");
+        object.insert("allOf".to_string(), Value::Array(vec![reference]));
+        object.insert("nullable".to_string(), Value::Bool(true));
+    }
+}
+
+/// Checks whether a schema consists of nothing but a `$ref`
+fn is_ref(schema: &Value) -> bool {
+    schema
+        .as_object()
+        .is_some_and(|object| object.len() == 1 && object.contains_key("$ref"))
+}
+
 pub trait SchemaExt {
     /// Owned version of [`Schema::as_object`] or [`serde_json::Value::as_object`]
     fn to_object(self) -> Option<serde_json::Map<String, serde_json::Value>>;
@@ -120,13 +182,13 @@ pub(crate) fn schema_to_json(schema: &impl AsJson) -> serde_json::Value {
     schema.as_json().clone()
 }
 #[cfg(test)]
-trait AsJson {
+pub(crate) trait AsJson {
     fn as_json(&self) -> &serde_json::Value;
 }
 #[cfg(test)]
 impl AsJson for serde_json::Value {
     fn as_json(&self) -> &serde_json::Value {
-        &self
+        self
     }
 }
 #[cfg(test)]
@@ -259,6 +321,38 @@ mod tests {
             schema_to_json(&generator.generate::<Option<Refd>>()),
             json!({"allOf": [{"$ref": "#/components/schemas/Refd"}], "nullable": true})
         );
+        assert_eq!(
+            schema_to_json(&generator.generate::<Vec<Option<Refd>>>()),
+            json!({
+                "type": "array",
+                "items": {"allOf": [{"$ref": "#/components/schemas/Refd"}], "nullable": true}
+            })
+        );
+    }
+
+    #[test]
+    fn option_field_keeps_description() {
+        #[derive(JsonSchema)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Some refd
+            refd: Option<Refd>,
+        }
+
+        let mut generator = SchemaGenerator::new();
+        assert_eq!(
+            schema_to_json(&generator.generate_refless::<Outer>()),
+            json!({
+                "type": "object",
+                "properties": {
+                    "refd": {
+                        "description": "Some refd",
+                        "allOf": [{"$ref": "#/components/schemas/Refd"}],
+                        "nullable": true
+                    }
+                }
+            })
+        );
     }
 
     #[test]
@@ -301,6 +395,7 @@ mod tests {
             serde_json::to_value(object).unwrap(),
             json!({
                 "description": "A referenceable struct",
+                "type": "object",
                 "required": ["name", "unit"],
                 "properties": {
                     "maybe": {"type": "integer", "format": "uint32", "minimum": 0, "nullable": true},
