@@ -5,11 +5,12 @@ members = [
     "./galvyn-cli",
     "./galvyn-macros",
     "./galvyn-core",
+    "./galvyn-tracing",
     "./contrib/galvyn-contrib-auth",
     "./contrib/galvyn-contrib-oauth",
     "./contrib/galvyn-contrib-settings",
     "./contrib/galvyn-contrib-timers",
-    "./example/blog", "galvyn-tracing",
+    "./example/blog",
 ]
 
 [workspace.dependencies]
