@@ -155,6 +155,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
         if let Some(request_body) = route.handler.request_body.as_ref() {
             let (mime, schema) = (request_body.body)(&mut ctx);
             operation.request_body = Some(ReferenceOr::Item(RequestBody {
+                required: true,
                 content: FromIterator::from_iter([(
                     mime.to_string(),
                     MediaType {
