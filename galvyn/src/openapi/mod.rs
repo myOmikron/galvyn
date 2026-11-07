@@ -4,11 +4,14 @@ use std::any::Any;
 use std::any::TypeId;
 use std::sync::OnceLock;
 
+use galvyn_core::router::GalvynRoute;
+use galvyn_core::GalvynRouter;
 pub use openapiv3::OpenAPI;
 
 use crate::openapi::generate::generate_openapi;
 pub use crate::openapi::metadata::OpenapiMetadata;
 pub use crate::openapi::router_ext::OpenapiRouterExt;
+use crate::Galvyn;
 
 mod generate;
 mod metadata;
@@ -71,8 +74,32 @@ impl OpenapiBuilder {
         self
     }
 
-    /// Generated the openapi document
+    /// Generates the openapi document
+    ///
+    /// This method requires a fully-running galvyn instance.
     pub fn build(&self) -> OpenAPI {
-        generate_openapi(self)
+        self.build_routes(Galvyn::global().get_routes().into_iter())
+    }
+
+    /// Generates the openapi document for a root router
+    pub fn build_router(&self, router: GalvynRouter) -> OpenAPI {
+        let (_, routes) = router.finish();
+        self.build_routes(routes.iter())
+    }
+
+    /// Generates the openapi document for a list of routes
+    pub fn build_routes<'a>(&self, routes: impl IntoIterator<Item = &'a GalvynRoute>) -> OpenAPI {
+        generate_openapi(
+            routes.into_iter().filter(move |route| {
+                let Some(pages) = &self.private.pages else {
+                    return true;
+                };
+                let Some(ext) = route.extensions.get::<OpenapiMetadata>() else {
+                    return false;
+                };
+                ext.pages.iter().any(|page| pages.contains(page))
+            }),
+            self.omit_tags,
+        )
     }
 }

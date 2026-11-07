@@ -9,7 +9,7 @@ use openapiv3::Components;
 use openapiv3::Header;
 use openapiv3::Info;
 use openapiv3::MediaType;
-pub use openapiv3::OpenAPI;
+use openapiv3::OpenAPI;
 use openapiv3::Parameter;
 use openapiv3::ParameterData;
 use openapiv3::ParameterSchemaOrContent;
@@ -25,22 +25,18 @@ use openapiv3::Type;
 use tracing::debug;
 use tracing::warn;
 
-use crate::openapi::OpenapiBuilder;
 use crate::openapi::OpenapiMetadata;
-use crate::Galvyn;
 
-pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
+pub fn generate_openapi<'a>(
+    routes: impl IntoIterator<Item = &'a GalvynRoute>,
+    omit_tags: bool,
+) -> OpenAPI {
     let mut schemas = SchemaGenerator::new();
     let mut paths = Paths::default();
     let default_metadata = OpenapiMetadata::default();
 
-    for route in Galvyn::global().get_routes() {
+    for route in routes {
         let openapi_ext = route.extensions.get().unwrap_or(&default_metadata);
-        if let Some(pages) = &builder.private.pages {
-            if !openapi_ext.pages.iter().any(|page| pages.contains(page)) {
-                continue;
-            }
-        }
 
         let ReferenceOr::Item(path) = paths
             .paths
@@ -77,7 +73,7 @@ pub fn generate_openapi(builder: &OpenapiBuilder) -> OpenAPI {
         }
         operation.operation_id = Some(route.handler.ident.to_string());
         operation.deprecated = route.handler.deprecated;
-        if !builder.omit_tags {
+        if !omit_tags {
             operation.tags = openapi_ext.tags.iter().copied().map(String::from).collect();
         }
 
