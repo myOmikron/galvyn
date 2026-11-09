@@ -29,7 +29,7 @@ use tracing::instrument;
 use crate::Module;
 
 pub fn layer() -> SessionManagerLayer<RormStore> {
-    SessionManagerLayer::new(RormStore::new(Database::global().clone()))
+    SessionManagerLayer::new(RormStore::default())
         .with_expiry(Expiry::OnInactivity(Duration::hours(24)))
         .with_same_site(SameSite::Lax)
         .with_always_save(true)
@@ -44,28 +44,44 @@ pub struct GalvynSession {
 }
 
 /// The session store for rorm
+#[derive(Debug, Clone, Default)]
 pub struct RormStore {
-    db: Database,
+    db: RormStoreDb,
 }
 
 impl RormStore {
-    /// Construct a new Store
+    /// Construct a new store with an explicit `db`
+    ///
+    /// Use `default` to access the database lazily through `::global()`.
     pub fn new(db: Database) -> Self {
-        Self { db }
-    }
-}
-
-impl Debug for RormStore {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Galvyn rorm store")
-    }
-}
-
-impl Clone for RormStore {
-    fn clone(&self) -> Self {
         Self {
-            db: self.db.clone(),
+            db: RormStoreDb::Explicit(db),
         }
+    }
+}
+
+#[derive(Clone, Default)]
+enum RormStoreDb {
+    #[default]
+    Module,
+    Explicit(Database),
+}
+
+impl RormStoreDb {
+    fn get(&self) -> &Database {
+        match self {
+            RormStoreDb::Module => Database::global(),
+            RormStoreDb::Explicit(x) => x,
+        }
+    }
+}
+
+impl Debug for RormStoreDb {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Module => "Module",
+            Self::Explicit(_) => "Explicit",
+        })
     }
 }
 
@@ -79,6 +95,7 @@ impl SessionStore for RormStore {
         debug!("Creating new session");
         let mut tx = self
             .db
+            .get()
             .start_transaction()
             .await
             .map_err(RormStoreError::from)?;
@@ -121,6 +138,7 @@ impl SessionStore for RormStore {
 
         let mut tx = self
             .db
+            .get()
             .start_transaction()
             .await
             .map_err(RormStoreError::from)?;
@@ -157,7 +175,7 @@ impl SessionStore for RormStore {
     #[instrument(level = "trace")]
     async fn load(&self, session_id: &Id) -> tower_sessions::session_store::Result<Option<Record>> {
         debug!("Loading session");
-        let db = &self.db;
+        let db = self.db.get();
 
         let session = rorm::query(db, GalvynSession)
             .condition(and!(
@@ -182,7 +200,7 @@ impl SessionStore for RormStore {
 
     #[instrument(level = "trace")]
     async fn delete(&self, session_id: &Id) -> tower_sessions::session_store::Result<()> {
-        let db = &self.db;
+        let db = self.db.get();
 
         rorm::delete(db, GalvynSession)
             .condition(GalvynSession.id.equals(session_id.to_string()))
@@ -197,7 +215,7 @@ impl SessionStore for RormStore {
 impl ExpiredDeletion for RormStore {
     #[instrument(level = "trace")]
     async fn delete_expired(&self) -> tower_sessions::session_store::Result<()> {
-        let db = &self.db;
+        let db = self.db.get();
 
         rorm::delete(db, GalvynSession)
             .condition(
