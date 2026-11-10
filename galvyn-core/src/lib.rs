@@ -18,6 +18,8 @@ pub mod re_exports {
     pub use serde;
     pub use serde_json;
     pub use time;
+    #[cfg(feature = "sessions")]
+    pub use tower_cookies;
     #[cfg(feature = "opentelemetry")]
     pub use tracing_opentelemetry;
     pub use uuid;
