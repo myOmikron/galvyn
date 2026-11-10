@@ -16,7 +16,6 @@ use tracing::instrument;
 use crate::Module;
 use crate::session::session::Id;
 use crate::session::session::Record;
-use crate::session::store::ExpiredDeletion;
 use crate::session::store::SessionStore;
 use crate::session::store::StoreError;
 use crate::session::store::StoreResult;
@@ -187,25 +186,6 @@ impl SessionStore for RormStore {
 
         rorm::delete(db, GalvynSession)
             .condition(GalvynSession.id.equals(session_id.to_string()))
-            .await
-            .map_err(RormStoreError::from)?;
-
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl ExpiredDeletion for RormStore {
-    #[instrument(level = "trace")]
-    async fn delete_expired(&self) -> StoreResult<()> {
-        let db = self.db.get();
-
-        rorm::delete(db, GalvynSession)
-            .condition(
-                GalvynSession
-                    .expires_at
-                    .less_than(OffsetDateTime::now_utc()),
-            )
             .await
             .map_err(RormStoreError::from)?;
 

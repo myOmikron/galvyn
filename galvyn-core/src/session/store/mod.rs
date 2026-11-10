@@ -121,7 +121,13 @@ pub trait SessionStore: Debug + Send + Sync + 'static {
     /// The record is given as an exclusive reference to allow modifications,
     /// such as assigning a new ID, during the creation process.
     async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
-        default_create(self, session_record).await
+        tracing::warn!(
+            "The default implementation of `SessionStore::create` is being used, which relies on \
+            `SessionStore::save`. To properly handle potential ID collisions, it is recommended that \
+            stores implement their own version of `SessionStore::create`."
+        );
+        self.save(session_record).await?;
+        Ok(())
     }
 
     /// Saves the provided session record to the store.
@@ -140,67 +146,4 @@ pub trait SessionStore: Debug + Send + Sync + 'static {
     ///
     /// If the session exists, it is removed from the store.
     async fn delete(&self, session_id: &Id) -> StoreResult<()>;
-}
-
-async fn default_create<S: SessionStore + ?Sized>(
-    store: &S,
-    session_record: &mut Record,
-) -> StoreResult<()> {
-    tracing::warn!(
-        "The default implementation of `SessionStore::create` is being used, which relies on \
-         `SessionStore::save`. To properly handle potential ID collisions, it is recommended that \
-         stores implement their own version of `SessionStore::create`."
-    );
-    store.save(session_record).await?;
-    Ok(())
-}
-
-/// Provides a method for deleting expired sessions.
-#[async_trait]
-pub trait ExpiredDeletion: SessionStore
-where
-    Self: Sized,
-{
-    /// A method for deleting expired sessions from the store.
-    async fn delete_expired(&self) -> StoreResult<()>;
-
-    /// This function will keep running indefinitely, deleting expired rows and
-    /// then waiting for the specified period before deleting again.
-    ///
-    /// Generally this will be used as a task, for example via
-    /// `tokio::task::spawn`.
-    ///
-    /// # Errors
-    ///
-    /// This function returns a `Result` that contains an error of type
-    /// `sqlx::Error` if the deletion operation fails.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run,ignore
-    /// use tower_sessions::session_store::ExpiredDeletion;
-    /// use tower_sessions_sqlx_store::{sqlx::SqlitePool, SqliteStore};
-    ///
-    /// # {
-    /// # tokio_test::block_on(async {
-    /// let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-    /// let session_store = SqliteStore::new(pool);
-    ///
-    /// tokio::task::spawn(
-    ///     session_store
-    ///         .clone()
-    ///         .continuously_delete_expired(tokio::time::Duration::from_secs(60)),
-    /// );
-    /// # })
-    /// ```
-    #[cfg(feature = "deletion-task")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "deletion-task")))]
-    async fn continuously_delete_expired(self, period: tokio::time::Duration) -> StoreResult<()> {
-        let mut interval = tokio::time::interval(period);
-        interval.tick().await; // The first tick completes immediately; skip.
-        loop {
-            interval.tick().await;
-            self.delete_expired().await?;
-        }
-    }
 }
