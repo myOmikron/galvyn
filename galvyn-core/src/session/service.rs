@@ -15,8 +15,6 @@ use tower::Service;
 use tower_cookies::Cookie;
 use tower_cookies::CookieManager;
 use tower_cookies::Cookies;
-#[cfg(any(feature = "signed", feature = "private"))]
-use tower_cookies::Key;
 use tower_cookies::cookie::SameSite;
 use tracing::Instrument;
 
@@ -25,75 +23,6 @@ use crate::session::Session;
 use crate::session::SessionStore;
 use crate::session::session::Id;
 use crate::session::{self};
-
-#[doc(hidden)]
-pub trait CookieController: Clone + Send + 'static {
-    fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>>;
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>);
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>);
-}
-
-#[doc(hidden)]
-#[derive(Debug, Clone)]
-pub struct PlaintextCookie;
-
-impl CookieController for PlaintextCookie {
-    fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>> {
-        cookies.get(name).map(Cookie::into_owned)
-    }
-
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.add(cookie)
-    }
-
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.remove(cookie)
-    }
-}
-
-#[doc(hidden)]
-#[cfg(feature = "signed")]
-#[derive(Debug, Clone)]
-pub struct SignedCookie {
-    key: Key,
-}
-
-#[cfg(feature = "signed")]
-impl CookieController for SignedCookie {
-    fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>> {
-        cookies.signed(&self.key).get(name).map(Cookie::into_owned)
-    }
-
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.signed(&self.key).add(cookie)
-    }
-
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.signed(&self.key).remove(cookie)
-    }
-}
-
-#[doc(hidden)]
-#[cfg(feature = "private")]
-#[derive(Debug, Clone)]
-pub struct PrivateCookie {
-    key: Key,
-}
-
-#[cfg(feature = "private")]
-impl CookieController for PrivateCookie {
-    fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>> {
-        cookies.private(&self.key).get(name).map(Cookie::into_owned)
-    }
-
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.private(&self.key).add(cookie)
-    }
-
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.private(&self.key).remove(cookie)
-    }
-}
 
 #[derive(Debug, Clone)]
 struct SessionConfig<'a> {
@@ -148,11 +77,10 @@ impl Default for SessionConfig<'_> {
 
 /// A middleware that provides [`Session`] as a request extension.
 #[derive(Debug, Clone)]
-pub struct SessionManager<S, Store: SessionStore, C: CookieController = PlaintextCookie> {
+pub struct SessionManager<S, Store: SessionStore> {
     inner: S,
     session_store: Arc<Store>,
     session_config: SessionConfig<'static>,
-    cookie_controller: C,
 }
 
 impl<S, Store: SessionStore> SessionManager<S, Store> {
@@ -162,13 +90,12 @@ impl<S, Store: SessionStore> SessionManager<S, Store> {
             inner,
             session_store: Arc::new(session_store),
             session_config: Default::default(),
-            cookie_controller: PlaintextCookie,
         }
     }
 }
 
-impl<ReqBody, ResBody, S, Store: SessionStore, C: CookieController> Service<Request<ReqBody>>
-    for SessionManager<S, Store, C>
+impl<ReqBody, ResBody, S, Store: SessionStore> Service<Request<ReqBody>>
+    for SessionManager<S, Store>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>> + Clone + Send + 'static,
     S::Future: Send,
@@ -189,7 +116,6 @@ where
 
         let session_store = self.session_store.clone();
         let session_config = self.session_config.clone();
-        let cookie_controller = self.cookie_controller.clone();
 
         // Because the inner service can panic until ready, we need to ensure we only
         // use the ready service.
@@ -200,14 +126,14 @@ where
 
         Box::pin(
             async move {
-                let Some(cookies) = req.extensions().get::<_>().cloned() else {
+                let Some(cookies) = req.extensions().get::<Cookies>().cloned() else {
                     // In practice this should never happen because we wrap `CookieManager`
                     // directly.
                     tracing::error!("missing cookies request extension");
                     return Ok(Response::default());
                 };
 
-                let session_cookie = cookie_controller.get(&cookies, &session_config.name);
+                let session_cookie = cookies.get(&session_config.name).map(Cookie::into_owned);
                 let session_id = session_cookie.as_ref().and_then(|cookie| {
                     cookie
                         .value()
@@ -255,7 +181,7 @@ where
                         cookie.set_secure(session_config.secure);
                         cookie.set_http_only(session_config.http_only);
 
-                        cookie_controller.remove(&cookies, cookie);
+                        cookies.remove(cookie);
                     }
 
                     _ if (modified || session_config.always_save)
@@ -283,7 +209,7 @@ where
                         let session_cookie = session_config.build_cookie(session_id, expiry);
 
                         tracing::debug!("adding session cookie");
-                        cookie_controller.add(&cookies, session_cookie);
+                        cookies.add(session_cookie);
                     }
 
                     _ => (),
@@ -298,13 +224,12 @@ where
 
 /// A layer for providing [`Session`] as a request extension.
 #[derive(Debug, Clone)]
-pub struct SessionManagerLayer<Store: SessionStore, C: CookieController = PlaintextCookie> {
+pub struct SessionManagerLayer<Store: SessionStore> {
     session_store: Arc<Store>,
     session_config: SessionConfig<'static>,
-    cookie_controller: C,
 }
 
-impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
+impl<Store: SessionStore> SessionManagerLayer<Store> {
     /// Configures the name of the cookie used for the session.
     /// The default value is `"id"`.
     ///
@@ -456,58 +381,6 @@ impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
         self.session_config.always_save = always_save;
         self
     }
-
-    /// Manages the session cookie via a signed interface.
-    ///
-    /// See [`SignedCookies`](tower_cookies::SignedCookies).
-    ///
-    /// ```rust
-    /// use tower_sessions::{cookie::Key, MemoryStore, SessionManagerLayer};
-    ///
-    /// # /*
-    /// let key = { /* a cryptographically random key >= 64 bytes */ };
-    /// # */
-    /// # let key: &Vec<u8> = &(0..64).collect();
-    /// # let key: &[u8] = &key[..];
-    /// # let key = Key::try_from(key).unwrap();
-    ///
-    /// let session_store = MemoryStore::default();
-    /// let session_service = SessionManagerLayer::new(session_store).with_signed(key);
-    /// ```
-    #[cfg(feature = "signed")]
-    pub fn with_signed(self, key: Key) -> SessionManagerLayer<Store, SignedCookie> {
-        SessionManagerLayer::<Store, SignedCookie> {
-            session_store: self.session_store,
-            session_config: self.session_config,
-            cookie_controller: SignedCookie { key },
-        }
-    }
-
-    /// Manages the session cookie via an encrypted interface.
-    ///
-    /// See [`PrivateCookies`](tower_cookies::PrivateCookies).
-    ///
-    /// ```rust
-    /// use tower_sessions::{cookie::Key, MemoryStore, SessionManagerLayer};
-    ///
-    /// # /*
-    /// let key = { /* a cryptographically random key >= 64 bytes */ };
-    /// # */
-    /// # let key: &Vec<u8> = &(0..64).collect();
-    /// # let key: &[u8] = &key[..];
-    /// # let key = Key::try_from(key).unwrap();
-    ///
-    /// let session_store = MemoryStore::default();
-    /// let session_service = SessionManagerLayer::new(session_store).with_private(key);
-    /// ```
-    #[cfg(feature = "private")]
-    pub fn with_private(self, key: Key) -> SessionManagerLayer<Store, PrivateCookie> {
-        SessionManagerLayer::<Store, PrivateCookie> {
-            session_store: self.session_store,
-            session_config: self.session_config,
-            cookie_controller: PrivateCookie { key },
-        }
-    }
 }
 
 impl<Store: SessionStore> SessionManagerLayer<Store> {
@@ -528,20 +401,18 @@ impl<Store: SessionStore> SessionManagerLayer<Store> {
         Self {
             session_store: Arc::new(session_store),
             session_config,
-            cookie_controller: PlaintextCookie,
         }
     }
 }
 
-impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionManagerLayer<Store, C> {
-    type Service = CookieManager<SessionManager<S, Store, C>>;
+impl<S, Store: SessionStore> Layer<S> for SessionManagerLayer<Store> {
+    type Service = CookieManager<SessionManager<S, Store>>;
 
     fn layer(&self, inner: S) -> Self::Service {
         let session_manager = SessionManager {
             inner,
             session_store: self.session_store.clone(),
             session_config: self.session_config.clone(),
-            cookie_controller: self.cookie_controller.clone(),
         };
 
         CookieManager::new(session_manager)
