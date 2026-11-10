@@ -96,7 +96,7 @@ impl Session {
     /// ```
     pub fn new(
         session_id: Option<Id>,
-        store: Arc<impl SessionStore>,
+        store: Arc<dyn SessionStore>,
         expiry: Option<Expiry>,
     ) -> Self {
         let inner = Inner {

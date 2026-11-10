@@ -35,7 +35,7 @@ pub mod session;
 pub mod session_store;
 //
 
-pub fn layer() -> SessionManagerLayer<RormStore> {
+pub fn layer() -> SessionManagerLayer {
     SessionManagerLayer::new(RormStore::default())
         .with_expiry(Expiry::OnInactivity(Duration::hours(24)))
         .with_same_site(SameSite::Lax)
