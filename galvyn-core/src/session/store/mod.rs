@@ -81,6 +81,7 @@
 //! The [`ExpiredDeletion`] trait provides a method for deleting expired
 //! sessions. Implementations can optionally provide a method for continuously
 //! deleting expired sessions at a specified interval.
+
 use std::fmt::Debug;
 
 use async_trait::async_trait;
@@ -88,9 +89,13 @@ use async_trait::async_trait;
 use crate::session::session::Id;
 use crate::session::session::Record;
 
+pub mod cache;
+pub mod memory;
+pub mod rorm;
+
 /// Stores must map any errors that might occur during their use to this type.
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum StoreError {
     #[error("Encoding failed with: {0}")]
     Encode(String),
 
@@ -101,7 +106,7 @@ pub enum Error {
     Backend(String),
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type StoreResult<T> = Result<T, StoreError>;
 
 /// Defines the interface for session management.
 ///
@@ -115,32 +120,32 @@ pub trait SessionStore: Debug + Send + Sync + 'static {
     ///
     /// The record is given as an exclusive reference to allow modifications,
     /// such as assigning a new ID, during the creation process.
-    async fn create(&self, session_record: &mut Record) -> Result<()> {
+    async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
         default_create(self, session_record).await
     }
 
     /// Saves the provided session record to the store.
     ///
     /// This method is intended for updating the state of an existing session.
-    async fn save(&self, session_record: &Record) -> Result<()>;
+    async fn save(&self, session_record: &Record) -> StoreResult<()>;
 
     /// Loads an existing session record from the store using the provided ID.
     ///
     /// If a session with the given ID exists, it is returned. If the session
     /// does not exist or has been invalidated (e.g., expired), `None` is
     /// returned.
-    async fn load(&self, session_id: &Id) -> Result<Option<Record>>;
+    async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>>;
 
     /// Deletes a session record from the store using the provided ID.
     ///
     /// If the session exists, it is removed from the store.
-    async fn delete(&self, session_id: &Id) -> Result<()>;
+    async fn delete(&self, session_id: &Id) -> StoreResult<()>;
 }
 
 async fn default_create<S: SessionStore + ?Sized>(
     store: &S,
     session_record: &mut Record,
-) -> Result<()> {
+) -> StoreResult<()> {
     tracing::warn!(
         "The default implementation of `SessionStore::create` is being used, which relies on \
          `SessionStore::save`. To properly handle potential ID collisions, it is recommended that \
@@ -150,96 +155,6 @@ async fn default_create<S: SessionStore + ?Sized>(
     Ok(())
 }
 
-/// Provides a layered caching mechanism with a cache as the frontend and a
-/// store as the backend..
-///
-/// Contains both a cache, which acts as a frontend, and a store which acts as a
-/// backend. Both cache and store implement `SessionStore`.
-///
-/// By using a cache, the cost of reads can be greatly reduced as once cached,
-/// reads need only interact with the frontend, forgoing the cost of retrieving
-/// the session record from the backend.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// # tokio_test::block_on(async {
-/// use tower_sessions::CachingSessionStore;
-/// use tower_sessions_moka_store::MokaStore;
-/// use tower_sessions_sqlx_store::{SqlitePool, SqliteStore};
-/// let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-/// let sqlite_store = SqliteStore::new(pool);
-/// let moka_store = MokaStore::new(Some(2_000));
-/// let caching_store = CachingSessionStore::new(moka_store, sqlite_store);
-/// # })
-/// ```
-#[derive(Debug, Clone)]
-pub struct CachingSessionStore<Cache: SessionStore, Store: SessionStore> {
-    cache: Cache,
-    store: Store,
-}
-
-impl<Cache: SessionStore, Store: SessionStore> CachingSessionStore<Cache, Store> {
-    /// Create a new `CachingSessionStore`.
-    pub fn new(cache: Cache, store: Store) -> Self {
-        Self { cache, store }
-    }
-}
-
-#[async_trait]
-impl<Cache, Store> SessionStore for CachingSessionStore<Cache, Store>
-where
-    Cache: SessionStore,
-    Store: SessionStore,
-{
-    async fn create(&self, record: &mut Record) -> Result<()> {
-        self.store.create(record).await?;
-        self.cache.create(record).await?;
-        Ok(())
-    }
-
-    async fn save(&self, record: &Record) -> Result<()> {
-        let store_save_fut = self.store.save(record);
-        let cache_save_fut = self.cache.save(record);
-
-        futures_lite::future::try_zip(store_save_fut, cache_save_fut).await?;
-
-        Ok(())
-    }
-
-    async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
-        match self.cache.load(session_id).await {
-            // We found a session in the cache, so let's use it.
-            Ok(Some(session_record)) => Ok(Some(session_record)),
-
-            // We didn't find a session in the cache, so we'll try loading from the backend.
-            //
-            // When we find a session in the backend, we'll hydrate our cache with it.
-            Ok(None) => {
-                let session_record = self.store.load(session_id).await?;
-
-                if let Some(ref session_record) = session_record {
-                    self.cache.save(session_record).await?;
-                }
-
-                Ok(session_record)
-            }
-
-            // Some error occurred with our cache so we'll bubble this up.
-            Err(err) => Err(err),
-        }
-    }
-
-    async fn delete(&self, session_id: &Id) -> Result<()> {
-        let store_delete_fut = self.store.delete(session_id);
-        let cache_delete_fut = self.cache.delete(session_id);
-
-        futures_lite::future::try_zip(store_delete_fut, cache_delete_fut).await?;
-
-        Ok(())
-    }
-}
-
 /// Provides a method for deleting expired sessions.
 #[async_trait]
 pub trait ExpiredDeletion: SessionStore
@@ -247,7 +162,7 @@ where
     Self: Sized,
 {
     /// A method for deleting expired sessions from the store.
-    async fn delete_expired(&self) -> Result<()>;
+    async fn delete_expired(&self) -> StoreResult<()>;
 
     /// This function will keep running indefinitely, deleting expired rows and
     /// then waiting for the specified period before deleting again.
@@ -280,7 +195,7 @@ where
     /// ```
     #[cfg(feature = "deletion-task")]
     #[cfg_attr(docsrs, doc(cfg(feature = "deletion-task")))]
-    async fn continuously_delete_expired(self, period: tokio::time::Duration) -> Result<()> {
+    async fn continuously_delete_expired(self, period: tokio::time::Duration) -> StoreResult<()> {
         let mut interval = tokio::time::interval(period);
         interval.tick().await; // The first tick completes immediately; skip.
         loop {

@@ -20,8 +20,8 @@ use tracing::Instrument;
 
 use crate::session::Expiry;
 use crate::session::Session;
-use crate::session::SessionStore;
 use crate::session::session::Id;
+use crate::session::store::SessionStore;
 use crate::session::{self};
 
 #[derive(Debug, Clone)]

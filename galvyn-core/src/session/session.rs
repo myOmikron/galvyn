@@ -1,7 +1,9 @@
 //! A session which allows HTTP applications to associate data with visitors.
+
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
+use std::future;
 use std::hash::BuildHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -13,6 +15,9 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{self};
 
+use axum::extract::FromRequestParts;
+use axum::http;
+use axum::http::request::Parts;
 use base64::DecodeError;
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -26,8 +31,8 @@ use tokio::sync::MappedMutexGuard;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
 
-use crate::session::SessionStore;
-use crate::session::session_store;
+use crate::session::store;
+use crate::session::store::SessionStore;
 
 const DEFAULT_DURATION: Duration = Duration::weeks(2);
 
@@ -46,7 +51,7 @@ pub enum Error {
 
     /// Maps `session_store::Error` errors.
     #[error(transparent)]
-    Store(#[from] session_store::Error),
+    Store(#[from] store::StoreError),
 }
 
 #[derive(Debug)]
@@ -878,6 +883,21 @@ impl Session {
             .store(true, atomic::Ordering::Release);
 
         Ok(())
+    }
+}
+
+impl<S> FromRequestParts<S> for Session {
+    type Rejection = (http::StatusCode, &'static str);
+
+    #[allow(refining_impl_trait)]
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> future::Ready<std::result::Result<Self, Self::Rejection>> {
+        future::ready(parts.extensions.get::<Session>().cloned().ok_or((
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Can't extract session. Is `SessionManagerLayer` enabled?",
+        )))
     }
 }
 
