@@ -32,7 +32,7 @@ opentelemetry = [
 # Implements cookie-based persistent sessions
 sessions = [
     "rorm",
-    "dep:tower-sessions",
+    "dep:tower-cookies",
 ]
 
 # Experimental support for multiple registries
@@ -57,7 +57,7 @@ time = { version = "~0.3", features = ["serde", "formatting", "parsing", "macros
 pin-project-lite = { version = "~0.2" }
 
 # TODO: maybe roll our own?
-tower-sessions = { version = "~0.15", optional = true }
+tower-cookies = { version = "~0.11", optional = true }
 # required by tower-sessions
 async-trait = { version = "~0.1" }
 base64 = { workspace = true }

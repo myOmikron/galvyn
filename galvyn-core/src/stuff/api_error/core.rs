@@ -279,5 +279,5 @@ impl From<TransactionError> for CoreApiError {
     }
 }
 #[cfg(feature = "sessions")]
-impl IntoServerError for tower_sessions::session::Error {}
+impl IntoServerError for crate::session::session::Error {}
 impl IntoServerError for anyhow::Error {}

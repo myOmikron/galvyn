@@ -11,22 +11,29 @@ use rorm::db::transaction::TransactionError;
 use rorm::fields::types::Json;
 use schemars::_serde_json::Value;
 use thiserror::Error;
-use tower_sessions::ExpiredDeletion;
-use tower_sessions::Expiry;
-pub use tower_sessions::Session;
-use tower_sessions::SessionManagerLayer;
-use tower_sessions::SessionStore;
-use tower_sessions::cookie::SameSite;
-use tower_sessions::cookie::time::Duration;
-use tower_sessions::cookie::time::OffsetDateTime;
-pub use tower_sessions::session::Error;
-pub use tower_sessions::session::Id;
-use tower_sessions::session::Record;
-use tower_sessions::session_store::Error as StoreError;
+use time::Duration;
+use time::OffsetDateTime;
+use tower_cookies::cookie::SameSite;
 use tracing::debug;
 use tracing::instrument;
 
+pub use self::service::SessionManager;
+pub use self::service::SessionManagerLayer;
+//
+#[doc(inline)]
+pub use self::{
+    session::{Expiry, Session},
+    session_store::{CachingSessionStore, ExpiredDeletion, SessionStore},
+};
 use crate::Module;
+use crate::session::session::Id;
+use crate::session::session::Record;
+
+pub mod extract;
+pub mod service;
+pub mod session;
+pub mod session_store;
+//
 
 pub fn layer() -> SessionManagerLayer<RormStore> {
     SessionManagerLayer::new(RormStore::default())
@@ -88,10 +95,7 @@ impl Debug for RormStoreDb {
 #[async_trait]
 impl SessionStore for RormStore {
     #[instrument(level = "trace")]
-    async fn create(
-        &self,
-        session_record: &mut Record,
-    ) -> tower_sessions::session_store::Result<()> {
+    async fn create(&self, session_record: &mut Record) -> session_store::Result<()> {
         debug!("Creating new session");
         let mut tx = self
             .db
@@ -129,7 +133,7 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn save(&self, session_record: &Record) -> tower_sessions::session_store::Result<()> {
+    async fn save(&self, session_record: &Record) -> session_store::Result<()> {
         let Record {
             id,
             data,
@@ -173,7 +177,7 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn load(&self, session_id: &Id) -> tower_sessions::session_store::Result<Option<Record>> {
+    async fn load(&self, session_id: &Id) -> session_store::Result<Option<Record>> {
         debug!("Loading session");
         let db = self.db.get();
 
@@ -199,7 +203,7 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn delete(&self, session_id: &Id) -> tower_sessions::session_store::Result<()> {
+    async fn delete(&self, session_id: &Id) -> session_store::Result<()> {
         let db = self.db.get();
 
         rorm::delete(db, GalvynSession)
@@ -214,7 +218,7 @@ impl SessionStore for RormStore {
 #[async_trait]
 impl ExpiredDeletion for RormStore {
     #[instrument(level = "trace")]
-    async fn delete_expired(&self) -> tower_sessions::session_store::Result<()> {
+    async fn delete_expired(&self) -> session_store::Result<()> {
         let db = self.db.get();
 
         rorm::delete(db, GalvynSession)
@@ -251,7 +255,7 @@ impl From<TransactionError> for RormStoreError {
         }
     }
 }
-impl From<RormStoreError> for StoreError {
+impl From<RormStoreError> for session_store::Error {
     fn from(value: RormStoreError) -> Self {
         Self::Backend(value.to_string())
     }
