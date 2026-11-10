@@ -418,7 +418,6 @@ impl<S> Layer<S> for SessionManagerLayer {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -427,11 +426,10 @@ mod tests {
     use axum::body::Body;
     use tower::ServiceBuilder;
     use tower::ServiceExt;
-    use tower_sessions_memory_store::MemoryStore;
 
     use super::*;
-    use crate::session::Id;
-    use crate::session::Record;
+    use crate::session::session::Record;
+    use crate::session::store::memory::MemoryStore;
 
     async fn handler(req: Request<Body>) -> anyhow::Result<Response<Body>> {
         let session = req
@@ -1031,4 +1029,3 @@ mod tests {
             .unwrap()
     }
 }
-*/

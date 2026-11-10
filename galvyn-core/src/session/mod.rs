@@ -3,9 +3,10 @@ use tower_cookies::cookie::SameSite;
 
 pub use self::service::SessionManager;
 pub use self::service::SessionManagerLayer;
-//
 #[doc(inline)]
-pub use self::session::{Expiry, Session};
+pub use self::session::Expiry;
+#[doc(inline)]
+pub use self::session::Session;
 use crate::session::session::Id;
 use crate::session::store::rorm::RormStore;
 
