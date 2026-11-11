@@ -19,23 +19,22 @@ use tracing::Instrument;
 use crate::session::Session;
 use crate::session::config::SessionConfig;
 use crate::session::store::SessionStore;
+use crate::session::store::StoreAndConfig;
 use crate::session::{self};
 
 /// A middleware that provides [`Session`] as a request extension.
 #[derive(Debug, Clone)]
 pub struct SessionManager<S> {
     inner: S,
-    session_store: Arc<dyn SessionStore>,
-    session_config: Arc<SessionConfig>,
+    store: Arc<StoreAndConfig>,
 }
 
 impl<S> SessionManager<S> {
     /// Create a new [`SessionManager`].
-    pub fn new(inner: S, session_store: impl SessionStore) -> Self {
+    pub fn new(inner: S, store: impl SessionStore, config: SessionConfig) -> Self {
         Self {
             inner,
-            session_store: Arc::new(session_store),
-            session_config: Default::default(),
+            store: Arc::new(StoreAndConfig { config, store }),
         }
     }
 }
@@ -59,8 +58,7 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let span = tracing::info_span!("call");
 
-        let session_store = self.session_store.clone();
-        let session_config = self.session_config.clone();
+        let store = self.store.clone();
 
         // Because the inner service can panic until ready, we need to ensure we only
         // use the ready service.
@@ -78,7 +76,7 @@ where
                     return Ok(Response::default());
                 };
 
-                let session_cookie = cookies.get(&session_config.name).map(Cookie::into_owned);
+                let session_cookie = cookies.get(&store.config.name).map(Cookie::into_owned);
                 let session_id = session_cookie.as_ref().and_then(|cookie| {
                     cookie
                         .value()
@@ -92,7 +90,7 @@ where
                         .ok()
                 });
 
-                let session = Session::new(session_id, session_store, session_config.expiry);
+                let session = Session::new(session_id, store.clone());
 
                 req.extensions_mut().insert(session.clone());
 
@@ -104,7 +102,7 @@ where
                 tracing::trace!(
                     modified = modified,
                     empty = empty,
-                    always_save = session_config.always_save,
+                    always_save = store.config.always_save,
                     "session response state",
                 );
 
@@ -116,20 +114,20 @@ where
                         // constructed.
                         //
                         // See: https://docs.rs/cookie/latest/cookie/struct.CookieJar.html#method.remove
-                        cookie.set_path(session_config.path.clone());
-                        if let Some(domain) = session_config.domain.clone() {
+                        cookie.set_path(store.config.path.clone());
+                        if let Some(domain) = store.config.domain.clone() {
                             cookie.set_domain(domain);
                         }
 
                         // Preserve the configured Secure and HttpOnly attributes. Otherwise
                         // `__Host-`/`__Secure-`-prefixed cookies without Secure may be rejected.
-                        cookie.set_secure(session_config.secure);
-                        cookie.set_http_only(session_config.http_only);
+                        cookie.set_secure(store.config.secure);
+                        cookie.set_http_only(store.config.http_only);
 
                         cookies.remove(cookie);
                     }
 
-                    _ if (modified || session_config.always_save)
+                    _ if (modified || store.config.always_save)
                         && !empty
                         && !res.status().is_server_error() =>
                     {
@@ -151,7 +149,7 @@ where
                         };
 
                         let expiry = session.expiry();
-                        let session_cookie = session_config.build_cookie(session_id, expiry);
+                        let session_cookie = store.config.build_cookie(session_id, expiry);
 
                         tracing::debug!("adding session cookie");
                         cookies.add(session_cookie);
@@ -170,8 +168,7 @@ where
 /// A layer for providing [`Session`] as a request extension.
 #[derive(Debug, Clone)]
 pub struct SessionManagerLayer {
-    session_store: Arc<dyn SessionStore>,
-    session_config: Arc<SessionConfig>,
+    store: Arc<StoreAndConfig>,
 }
 
 impl SessionManagerLayer {
@@ -188,8 +185,7 @@ impl SessionManagerLayer {
     /// ```
     pub fn new(store: impl SessionStore, config: SessionConfig) -> Self {
         Self {
-            session_store: Arc::new(store),
-            session_config: Arc::new(config),
+            store: Arc::new(StoreAndConfig { config, store }),
         }
     }
 }
@@ -200,8 +196,7 @@ impl<S> Layer<S> for SessionManagerLayer {
     fn layer(&self, inner: S) -> Self::Service {
         let session_manager = SessionManager {
             inner,
-            session_store: self.session_store.clone(),
-            session_config: self.session_config.clone(),
+            store: self.store.clone(),
         };
 
         CookieManager::new(session_manager)

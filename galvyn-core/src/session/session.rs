@@ -32,7 +32,7 @@ use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
 
 use crate::session::store;
-use crate::session::store::SessionStore;
+use crate::session::store::StoreAndConfig;
 
 const DEFAULT_DURATION: Duration = Duration::weeks(2);
 
@@ -79,7 +79,7 @@ struct Inner {
 /// visitors.
 #[derive(Debug, Clone)]
 pub struct Session {
-    store: Arc<dyn SessionStore>,
+    store: Arc<StoreAndConfig>,
     inner: Arc<Inner>,
 }
 
@@ -99,15 +99,11 @@ impl Session {
     /// let store = Arc::new(MemoryStore::default());
     /// Session::new(None, store, None);
     /// ```
-    pub fn new(
-        session_id: Option<Id>,
-        store: Arc<dyn SessionStore>,
-        expiry: Option<Expiry>,
-    ) -> Self {
+    pub(super) fn new(session_id: Option<Id>, store: Arc<StoreAndConfig>) -> Self {
         let inner = Inner {
             session_id: std::sync::Mutex::new(session_id),
             record: Mutex::new(None), // `None` indicates we have not loaded from store.
-            expiry: std::sync::Mutex::new(expiry),
+            expiry: std::sync::Mutex::new(store.config.expiry),
             is_modified: AtomicBool::new(false),
         };
 
@@ -542,23 +538,6 @@ impl Session {
     ///
     /// This may be used within applications directly to alter the session's
     /// time to live.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::sync::Arc;
-    ///
-    /// use time::OffsetDateTime;
-    /// use tower_sessions::{session::Expiry, MemoryStore, Session};
-    ///
-    /// let store = Arc::new(MemoryStore::default());
-    /// let session = Session::new(None, store, None);
-    ///
-    /// let expiry = Expiry::AtDateTime(OffsetDateTime::now_utc());
-    /// session.set_expiry(Some(expiry));
-    ///
-    /// assert_eq!(session.expiry(), Some(expiry));
-    /// ```
     pub fn set_expiry(&self, expiry: Option<Expiry>) {
         *self.inner.expiry.lock().expect(LOCK_POISON_MSG) = expiry;
         self.inner
@@ -567,24 +546,6 @@ impl Session {
     }
 
     /// Get session expiry as `OffsetDateTime`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::sync::Arc;
-    ///
-    /// use time::{Duration, OffsetDateTime};
-    /// use tower_sessions::{MemoryStore, Session};
-    ///
-    /// let store = Arc::new(MemoryStore::default());
-    /// let session = Session::new(None, store, None);
-    ///
-    /// // Our default duration is two weeks.
-    /// let expected_expiry = OffsetDateTime::now_utc().saturating_add(Duration::weeks(2));
-    ///
-    /// assert!(session.expiry_date() > expected_expiry.saturating_sub(Duration::seconds(1)));
-    /// assert!(session.expiry_date() < expected_expiry.saturating_add(Duration::seconds(1)));
-    /// ```
     pub fn expiry_date(&self) -> OffsetDateTime {
         let expiry = self.inner.expiry.lock().expect(LOCK_POISON_MSG);
         match *expiry {

@@ -86,6 +86,7 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 
+use crate::session::config::SessionConfig;
 use crate::session::session::Id;
 use crate::session::session::Record;
 
@@ -146,4 +147,29 @@ pub trait SessionStore: Debug + Send + Sync + 'static {
     ///
     /// If the session exists, it is removed from the store.
     async fn delete(&self, session_id: &Id) -> StoreResult<()>;
+}
+
+/// Bundles a [`SessionStore`] and a [`SessionConfig`] into a single entity
+#[derive(Debug)]
+pub(super) struct StoreAndConfig<T: ?Sized = dyn SessionStore> {
+    pub config: SessionConfig,
+    pub store: T,
+}
+
+impl StoreAndConfig {
+    pub async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
+        self.store.create(session_record).await
+    }
+
+    pub async fn save(&self, session_record: &Record) -> StoreResult<()> {
+        self.store.save(session_record).await
+    }
+
+    pub async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>> {
+        self.store.load(session_id).await
+    }
+
+    pub async fn delete(&self, session_id: &Id) -> StoreResult<()> {
+        self.store.delete(session_id).await
+    }
 }
