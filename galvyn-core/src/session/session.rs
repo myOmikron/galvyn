@@ -550,11 +550,15 @@ impl Session {
         let expiry = self.inner.expiry.lock().expect(LOCK_POISON_MSG);
         match *expiry {
             Some(Expiry::OnInactivity(duration)) => {
-                OffsetDateTime::now_utc().saturating_add(duration)
+                self.store.config.clock.now_utc().saturating_add(duration)
             }
             Some(Expiry::AtDateTime(datetime)) => datetime,
             Some(Expiry::OnSessionEnd) | None => {
-                OffsetDateTime::now_utc().saturating_add(DEFAULT_DURATION) // TODO: The default should probably be configurable.
+                self.store
+                    .config
+                    .clock
+                    .now_utc()
+                    .saturating_add(DEFAULT_DURATION) // TODO: The default should probably be configurable.
             }
         }
     }
@@ -579,7 +583,7 @@ impl Session {
     /// ```
     pub fn expiry_age(&self) -> Duration {
         std::cmp::max(
-            self.expiry_date() - OffsetDateTime::now_utc(),
+            self.expiry_date() - self.store.config.clock.now_utc(),
             Duration::ZERO,
         )
     }
@@ -935,23 +939,6 @@ impl Record {
 }
 
 /// Session expiry configuration.
-///
-/// # Examples
-///
-/// ```rust
-/// use time::{Duration, OffsetDateTime};
-/// use tower_sessions::Expiry;
-///
-/// // Will be expired on "session end".
-/// let expiry = Expiry::OnSessionEnd;
-///
-/// // Will be expired in five minutes from last acitve.
-/// let expiry = Expiry::OnInactivity(Duration::minutes(5));
-///
-/// // Will be expired at the given timestamp.
-/// let expired_at = OffsetDateTime::now_utc().saturating_add(Duration::weeks(2));
-/// let expiry = Expiry::AtDateTime(expired_at);
-/// ```
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Expiry {
     /// Expire on [current session end][current-session-end], as defined by the

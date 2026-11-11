@@ -14,6 +14,7 @@ use tracing::debug;
 use tracing::instrument;
 
 use crate::Module;
+use crate::session::config::SessionClock;
 use crate::session::session::Id;
 use crate::session::session::Record;
 use crate::session::store::SessionStore;
@@ -73,7 +74,7 @@ impl fmt::Debug for RormStoreDb {
 #[async_trait]
 impl SessionStore for RormStore {
     #[instrument(level = "trace")]
-    async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
+    async fn create(&self, _clock: &SessionClock, session_record: &mut Record) -> StoreResult<()> {
         debug!("Creating new session");
         let mut tx = self
             .db
@@ -111,7 +112,7 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn save(&self, session_record: &Record) -> StoreResult<()> {
+    async fn save(&self, _clock: &SessionClock, session_record: &Record) -> StoreResult<()> {
         let Record {
             id,
             data,
@@ -155,16 +156,14 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>> {
+    async fn load(&self, clock: &SessionClock, session_id: &Id) -> StoreResult<Option<Record>> {
         debug!("Loading session");
         let db = self.db.get();
 
         let session = rorm::query(db, GalvynSession)
             .condition(and!(
                 GalvynSession.id.equals(session_id.to_string()),
-                GalvynSession
-                    .expires_at
-                    .greater_than(OffsetDateTime::now_utc())
+                GalvynSession.expires_at.greater_than(clock.now_utc())
             ))
             .optional()
             .await
@@ -181,7 +180,7 @@ impl SessionStore for RormStore {
     }
 
     #[instrument(level = "trace")]
-    async fn delete(&self, session_id: &Id) -> StoreResult<()> {
+    async fn delete(&self, _clock: &SessionClock, session_id: &Id) -> StoreResult<()> {
         let db = self.db.get();
 
         rorm::delete(db, GalvynSession)

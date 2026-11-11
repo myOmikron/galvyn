@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::session::config::SessionClock;
 use crate::session::session::Id;
 use crate::session::session::Record;
 use crate::session::store::SessionStore;
@@ -47,23 +48,23 @@ where
     Cache: SessionStore,
     Store: SessionStore,
 {
-    async fn create(&self, record: &mut Record) -> StoreResult<()> {
-        self.store.create(record).await?;
-        self.cache.create(record).await?;
+    async fn create(&self, clock: &SessionClock, record: &mut Record) -> StoreResult<()> {
+        self.store.create(clock, record).await?;
+        self.cache.create(clock, record).await?;
         Ok(())
     }
 
-    async fn save(&self, record: &Record) -> StoreResult<()> {
-        let store_save_fut = self.store.save(record);
-        let cache_save_fut = self.cache.save(record);
+    async fn save(&self, clock: &SessionClock, record: &Record) -> StoreResult<()> {
+        let store_save_fut = self.store.save(clock, record);
+        let cache_save_fut = self.cache.save(clock, record);
 
         futures_lite::future::try_zip(store_save_fut, cache_save_fut).await?;
 
         Ok(())
     }
 
-    async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>> {
-        match self.cache.load(session_id).await {
+    async fn load(&self, clock: &SessionClock, session_id: &Id) -> StoreResult<Option<Record>> {
+        match self.cache.load(clock, session_id).await {
             // We found a session in the cache, so let's use it.
             Ok(Some(session_record)) => Ok(Some(session_record)),
 
@@ -71,10 +72,10 @@ where
             //
             // When we find a session in the backend, we'll hydrate our cache with it.
             Ok(None) => {
-                let session_record = self.store.load(session_id).await?;
+                let session_record = self.store.load(clock, session_id).await?;
 
                 if let Some(ref session_record) = session_record {
-                    self.cache.save(session_record).await?;
+                    self.cache.save(clock, session_record).await?;
                 }
 
                 Ok(session_record)
@@ -85,9 +86,9 @@ where
         }
     }
 
-    async fn delete(&self, session_id: &Id) -> StoreResult<()> {
-        let store_delete_fut = self.store.delete(session_id);
-        let cache_delete_fut = self.cache.delete(session_id);
+    async fn delete(&self, clock: &SessionClock, session_id: &Id) -> StoreResult<()> {
+        let store_delete_fut = self.store.delete(clock, session_id);
+        let cache_delete_fut = self.cache.delete(clock, session_id);
 
         futures_lite::future::try_zip(store_delete_fut, cache_delete_fut).await?;
 

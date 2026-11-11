@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt;
 
 use time::OffsetDateTime;
 use tower_cookies::Cookie;
@@ -8,7 +9,7 @@ use crate::session::Expiry;
 use crate::session::session::Id;
 
 /// Config how the session layer and session cookie should behave
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[cfg_attr(doc, non_exhaustive)]
 pub struct SessionConfig {
     /// Configures the name of the cookie used for the session.
@@ -61,6 +62,11 @@ pub struct SessionConfig {
     /// The default value is `false`.
     pub always_save: bool,
 
+    /// `now_utc()` implementation sessions (and their stores) should use.
+    ///
+    /// This field is primarily intended for tests when you want to inject a manually controlled clock.
+    pub clock: SessionClock,
+
     // Do not depend on this struct being exhaustive!
     #[doc(hidden)]
     pub you_are_making_a_mistake_this_struct_is_not_exhaustive: (),
@@ -77,8 +83,37 @@ impl Default for SessionConfig {
             path: "/".into(),
             domain: None,
             always_save: false,
+            clock: SessionClock::Builtin,
 
             you_are_making_a_mistake_this_struct_is_not_exhaustive: (),
+        }
+    }
+}
+
+/// `now_utc()` implementation sessions (and their stores) should use.
+pub enum SessionClock {
+    /// Use native `now_utc` from the `time` crate.
+    ///
+    /// This will use your system clock.
+    Builtin,
+
+    /// Use a custom closure
+    Custom(Box<dyn Fn() -> OffsetDateTime + Send + Sync>),
+}
+impl fmt::Debug for SessionClock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            SessionClock::Builtin => "Builtin",
+            SessionClock::Custom(_) => "Custom",
+        })
+    }
+}
+impl SessionClock {
+    /// Create a new `OffsetDateTime` with the current date and time in UTC.
+    pub fn now_utc(&self) -> OffsetDateTime {
+        match self {
+            SessionClock::Builtin => OffsetDateTime::now_utc(),
+            SessionClock::Custom(x) => x(),
         }
     }
 }
@@ -94,7 +129,7 @@ impl SessionConfig {
         cookie_builder = match expiry {
             Some(Expiry::OnInactivity(duration)) => cookie_builder.max_age(duration),
             Some(Expiry::AtDateTime(datetime)) => {
-                cookie_builder.max_age(datetime - OffsetDateTime::now_utc())
+                cookie_builder.max_age(datetime - self.clock.now_utc())
             }
             Some(Expiry::OnSessionEnd) | None => cookie_builder,
         };

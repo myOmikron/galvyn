@@ -7,62 +7,8 @@
 //!
 //! # Implementing a Custom Store
 //!
-//! Below is an example of implementing a custom session store using an
-//! in-memory [`HashMap`]. This example is for illustration purposes only; you
-//! can use the provided [`MemoryStore`] directly without implementing it
-//! yourself.
-//!
-//! ```rust
-//! use std::{collections::HashMap, sync::Arc};
-//!
-//! use async_trait::async_trait;
-//! use time::OffsetDateTime;
-//! use tokio::sync::Mutex;
-//! use tower_sessions_core::{
-//!     session::{Id, Record},
-//!     session_store, SessionStore,
-//! };
-//!
-//! #[derive(Clone, Debug, Default)]
-//! pub struct MemoryStore(Arc<Mutex<HashMap<Id, Record>>>);
-//!
-//! #[async_trait]
-//! impl SessionStore for MemoryStore {
-//!     async fn create(&self, record: &mut Record) -> session_store::Result<()> {
-//!         let mut store_guard = self.0.lock().await;
-//!         while store_guard.contains_key(&record.id) {
-//!             // Session ID collision mitigation.
-//!             record.id = Id::default();
-//!         }
-//!         store_guard.insert(record.id, record.clone());
-//!         Ok(())
-//!     }
-//!
-//!     async fn save(&self, record: &Record) -> session_store::Result<()> {
-//!         self.0.lock().await.insert(record.id, record.clone());
-//!         Ok(())
-//!     }
-//!
-//!     async fn load(&self, session_id: &Id) -> session_store::Result<Option<Record>> {
-//!         Ok(self
-//!             .0
-//!             .lock()
-//!             .await
-//!             .get(session_id)
-//!             .filter(|Record { expiry_date, .. }| is_active(*expiry_date))
-//!             .cloned())
-//!     }
-//!
-//!     async fn delete(&self, session_id: &Id) -> session_store::Result<()> {
-//!         self.0.lock().await.remove(session_id);
-//!         Ok(())
-//!     }
-//! }
-//!
-//! fn is_active(expiry_date: OffsetDateTime) -> bool {
-//!     expiry_date > OffsetDateTime::now_utc()
-//! }
-//! ```
+//! Have a look at [`MemoryStore`].
+//! It is a simple example for implementing a session store.
 //!
 //! # Session Store Trait
 //!
@@ -75,17 +21,12 @@
 //! cache as the frontend and a store as the backend. This can improve read
 //! performance by reducing the need to access the backend store for frequently
 //! accessed sessions.
-//!
-//! # ExpiredDeletion
-//!
-//! The [`ExpiredDeletion`] trait provides a method for deleting expired
-//! sessions. Implementations can optionally provide a method for continuously
-//! deleting expired sessions at a specified interval.
 
 use std::fmt::Debug;
 
 use async_trait::async_trait;
 
+use crate::session::config::SessionClock;
 use crate::session::config::SessionConfig;
 use crate::session::session::Id;
 use crate::session::session::Record;
@@ -121,32 +62,32 @@ pub trait SessionStore: Debug + Send + Sync + 'static {
     ///
     /// The record is given as an exclusive reference to allow modifications,
     /// such as assigning a new ID, during the creation process.
-    async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
+    async fn create(&self, clock: &SessionClock, session_record: &mut Record) -> StoreResult<()> {
         tracing::warn!(
             "The default implementation of `SessionStore::create` is being used, which relies on \
             `SessionStore::save`. To properly handle potential ID collisions, it is recommended that \
             stores implement their own version of `SessionStore::create`."
         );
-        self.save(session_record).await?;
+        self.save(clock, session_record).await?;
         Ok(())
     }
 
     /// Saves the provided session record to the store.
     ///
     /// This method is intended for updating the state of an existing session.
-    async fn save(&self, session_record: &Record) -> StoreResult<()>;
+    async fn save(&self, clock: &SessionClock, session_record: &Record) -> StoreResult<()>;
 
     /// Loads an existing session record from the store using the provided ID.
     ///
     /// If a session with the given ID exists, it is returned. If the session
     /// does not exist or has been invalidated (e.g., expired), `None` is
     /// returned.
-    async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>>;
+    async fn load(&self, clock: &SessionClock, session_id: &Id) -> StoreResult<Option<Record>>;
 
     /// Deletes a session record from the store using the provided ID.
     ///
     /// If the session exists, it is removed from the store.
-    async fn delete(&self, session_id: &Id) -> StoreResult<()>;
+    async fn delete(&self, clock: &SessionClock, session_id: &Id) -> StoreResult<()>;
 }
 
 /// Bundles a [`SessionStore`] and a [`SessionConfig`] into a single entity
@@ -158,18 +99,18 @@ pub(super) struct StoreAndConfig<T: ?Sized = dyn SessionStore> {
 
 impl StoreAndConfig {
     pub async fn create(&self, session_record: &mut Record) -> StoreResult<()> {
-        self.store.create(session_record).await
+        self.store.create(&self.config.clock, session_record).await
     }
 
     pub async fn save(&self, session_record: &Record) -> StoreResult<()> {
-        self.store.save(session_record).await
+        self.store.save(&self.config.clock, session_record).await
     }
 
     pub async fn load(&self, session_id: &Id) -> StoreResult<Option<Record>> {
-        self.store.load(session_id).await
+        self.store.load(&self.config.clock, session_id).await
     }
 
     pub async fn delete(&self, session_id: &Id) -> StoreResult<()> {
-        self.store.delete(session_id).await
+        self.store.delete(&self.config.clock, session_id).await
     }
 }
