@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::Mutex;
@@ -13,15 +12,8 @@ use crate::session::store::StoreResult;
 /// A session store that lives only in memory.
 ///
 /// This is useful for testing but not recommended for real applications.
-///
-/// # Examples
-///
-/// ```rust
-/// use tower_sessions::MemoryStore;
-/// MemoryStore::default();
-/// ```
-#[derive(Clone, Debug, Default)]
-pub struct MemoryStore(Arc<Mutex<HashMap<Id, Record>>>);
+#[derive(Debug, Default)]
+pub struct MemoryStore(Mutex<HashMap<Id, Record>>);
 
 #[async_trait]
 impl SessionStore for MemoryStore {
