@@ -58,6 +58,7 @@ pin-project-lite = { version = "~0.2" }
 
 # TODO: maybe roll our own?
 tower-cookies = { version = "~0.11", optional = true }
+rand = { version = "~0.10" }
 # required by tower-sessions
 async-trait = { version = "~0.1" }
 base64 = { workspace = true }

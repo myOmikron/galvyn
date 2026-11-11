@@ -21,6 +21,7 @@ use axum::http::request::Parts;
 use base64::DecodeError;
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use rand::RngExt;
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -883,12 +884,7 @@ pub struct Id(pub i128); // TODO: By this being public, it may be possible to ov
 
 impl Default for Id {
     fn default() -> Self {
-        let [[a, b, c, d, e, f, g, h], [i, j, k, l, m, n, o, p]] =
-            [(); 2].map(|()| RandomState::default().build_hasher().finish().to_ne_bytes());
-
-        Self(i128::from_ne_bytes([
-            a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p,
-        ]))
+        Self(rand::rng().random())
     }
 }
 
