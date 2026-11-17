@@ -1,0 +1,34 @@
+[package]
+name = "forum"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Framework
+galvyn = { path = "../../galvyn", version = "*", features = ["contrib", "openapi"] }
+
+# async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Json serialization
+serde = { version = "~1", features = ["derive"] }
+serde_json = { version = "~1" }
+
+# Extension traits for `Future` and `Stream`
+futures-util = "0.3.30" # Used for consuming streams of db results
+
+# Cli argument parser
+clap = { version = "~4", features = ["derive"] }
+
+# Fancy boxed error
+anyhow = { version = "~1" }
+
+# Logging
+tracing = { version = "~0.1" }
+tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
+
+# Web client
+reqwest = { version = "~0.12", features = ["json", "cookies"] } # Used by the test subcommand
+
+time = "~0.3"
+uuid = { version = "~1", features = ["v4", "serde"] }

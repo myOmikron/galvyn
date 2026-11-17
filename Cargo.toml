@@ -10,6 +10,7 @@ members = [
     "./contrib/galvyn-contrib-settings",
     "./contrib/galvyn-contrib-timers",
     "./example/blog",
+    "./example/forum",
 ]
 
 [workspace.dependencies]

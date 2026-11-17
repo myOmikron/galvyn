@@ -1,0 +1,397 @@
+[Migration]
+Hash = "731730023030223005"
+Initial = true
+Replaces = []
+
+[[Migration.Operations]]
+Type = "CreateModel"
+Name = "thumb"
+
+[[Migration.Operations.Fields]]
+Name = "id"
+Type = "int64"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "auto_increment"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "primary_key"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/thumb.rs"
+Line = 10
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "is_up"
+Type = "boolean"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/thumb.rs"
+Line = 13
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateModel"
+Name = "stars"
+
+[[Migration.Operations.Fields]]
+Name = "id"
+Type = "int64"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "auto_increment"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "primary_key"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/stars.rs"
+Line = 18
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "amount"
+Type = "int16"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/stars.rs"
+Line = 21
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateModel"
+Name = "user"
+
+[[Migration.Operations.Fields]]
+Name = "id"
+Type = "int64"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "auto_increment"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "primary_key"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/user.rs"
+Line = 13
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "username"
+Type = "text"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "max_length"
+Value = 255
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "unique"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/user.rs"
+Line = 17
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "password"
+Type = "text"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "max_length"
+Value = 16
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/user.rs"
+Line = 23
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "role"
+Type = "choices"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "choices"
+Value = [
+    "User",
+    "Moderator",
+    "Admin",
+]
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/user.rs"
+Line = 26
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateModel"
+Name = "thread"
+
+[[Migration.Operations.Fields]]
+Name = "identifier"
+Type = "text"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "max_length"
+Value = 255
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "primary_key"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/thread.rs"
+Line = 10
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "name"
+Type = "text"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/thread.rs"
+Line = 13
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "opened_at"
+Type = "datetime"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "auto_create_time"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/thread.rs"
+Line = 17
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateModel"
+Name = "post"
+
+[[Migration.Operations.Fields]]
+Name = "uuid"
+Type = "uuid"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "primary_key"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 13
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "message"
+Type = "text"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "max_length"
+Value = 1024
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 16
+Column = 9
+
+[[Migration.Operations.Fields]]
+Name = "posted_at"
+Type = "datetime"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "auto_create_time"
+
+[[Migration.Operations.Fields.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Fields.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 31
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "thumb"
+
+[Migration.Operations.Field]
+Name = "user"
+Type = "int64"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "user"
+ColumnName = "id"
+OnDelete = "SetNull"
+OnUpdate = "Restrict"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/thumb.rs"
+Line = 17
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "thumb"
+
+[Migration.Operations.Field]
+Name = "post"
+Type = "uuid"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "post"
+ColumnName = "uuid"
+OnDelete = "Cascade"
+OnUpdate = "Restrict"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/thumb.rs"
+Line = 21
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "post"
+
+[Migration.Operations.Field]
+Name = "user"
+Type = "int64"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "user"
+ColumnName = "id"
+OnDelete = "SetNull"
+OnUpdate = "Restrict"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 20
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "post"
+
+[Migration.Operations.Field]
+Name = "thread"
+Type = "text"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "thread"
+ColumnName = "identifier"
+OnDelete = "Cascade"
+OnUpdate = "Cascade"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 23
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "post"
+
+[Migration.Operations.Field]
+Name = "reply_to"
+Type = "uuid"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "post"
+ColumnName = "uuid"
+OnDelete = "Cascade"
+OnUpdate = "Restrict"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/post.rs"
+Line = 27
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "stars"
+
+[Migration.Operations.Field]
+Name = "user"
+Type = "int64"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "user"
+ColumnName = "id"
+OnDelete = "SetNull"
+OnUpdate = "Restrict"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/stars.rs"
+Line = 25
+Column = 9
+
+[[Migration.Operations]]
+Type = "CreateField"
+Model = "stars"
+
+[Migration.Operations.Field]
+Name = "post"
+Type = "uuid"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "foreign_key"
+
+[Migration.Operations.Field.Annotations.Value]
+TableName = "post"
+ColumnName = "uuid"
+OnDelete = "Cascade"
+OnUpdate = "Restrict"
+
+[[Migration.Operations.Field.Annotations]]
+Type = "not_null"
+
+[Migration.Operations.Field.SourceDefinedAt]
+File = "example-forum-server/src/models/stars.rs"
+Line = 29
+Column = 9
