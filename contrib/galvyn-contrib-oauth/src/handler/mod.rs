@@ -8,7 +8,8 @@ use galvyn_core::stuff::api_error::ApiError;
 use galvyn_core::stuff::api_error::ApiResult;
 use galvyn_core::stuff::schema::SingleUuid;
 use galvyn_macros::get;
-use tracing::{error, info};
+use tracing::error;
+use tracing::info;
 use url::Url;
 
 use crate::OauthProviderModule;
@@ -112,7 +113,6 @@ pub async fn auth(Query(request): Query<AuthRequest>) -> OauthResult<Redirect> {
         .setup
         .frontend_redirect
         .redirect_uri(request_uuid);
-
 
     if let Err(err) = tx.commit().await {
         error!("Failed to commit redirect request: {}", err);

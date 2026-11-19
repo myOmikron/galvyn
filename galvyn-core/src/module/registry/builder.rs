@@ -62,7 +62,7 @@ impl RegistryBuilder {
 
             self.modules.push((
                 TypeId::of::<T>(),
-                BoxDynFnOnce::new(move |(span,)| {
+                Box::new(move |span| {
                     (
                         type_name::<T>(),
                         tokio::spawn(async {
@@ -81,7 +81,7 @@ impl RegistryBuilder {
                             ))
                             .await?;
 
-                            Ok(BoxDynFnOnce::new(move |mut modules: OwnedModulesSet| {
+                            Ok(Box::new(move |mut modules: OwnedModulesSet| {
                                 Box::pin(async move {
                                     let mut dependencies =
                                         <T::Dependencies as ModuleDependencies>::take(&mut modules);
@@ -111,7 +111,7 @@ impl RegistryBuilder {
                                     modules.insert(t);
                                     Ok(modules)
                                 }) as future::Boxed<_>
-                            }))
+                            }) as PreInitModule)
                         }),
                     )
                 }) as UninitModule,
@@ -129,16 +129,13 @@ impl RegistryBuilder {
         let span = Span::current();
 
         let pre_init_modules =
-            process_join_handles(self.modules.drain(..).map(|(_, x)| x.call((span.clone(),))))
+            process_join_handles(self.modules.drain(..).map(|(_, x)| x(span.clone())))
                 .await
                 .map_err(InitError::PreInit)?;
 
         let mut modules = OwnedModulesSet::new();
         for pre_init_module in pre_init_modules {
-            modules = pre_init_module
-                .call(modules)
-                .await
-                .map_err(InitError::Init)?;
+            modules = pre_init_module(modules).await.map_err(InitError::Init)?;
         }
 
         let registry = {
@@ -202,18 +199,21 @@ impl fmt::Display for InitError {
 impl Error for InitError {}
 
 /// An uninitialised module waiting to be pre-initialised
-type UninitModule = BoxDynFnOnce<
-    (Span,),
-    (
+type UninitModule = Box<
+    dyn FnOnce(
+        Span,
+    ) -> (
         &'static str,
         JoinHandle<Result<PreInitModule, module::PreInitError>>,
     ),
 >;
 
 /// A pre-initialised modules waiting to be initialised
-type PreInitModule = BoxDynFnOnce<
-    OwnedModulesSet,
-    future::Boxed<Result<OwnedModulesSet, (&'static str, module::InitError)>>,
+type PreInitModule = Box<
+    dyn FnOnce(
+            OwnedModulesSet,
+        ) -> future::Boxed<Result<OwnedModulesSet, (&'static str, module::InitError)>>
+        + Send,
 >;
 
 impl<M: Module> DynModule for M {
@@ -235,26 +235,6 @@ impl<M: Module> DynModule for M {
                 )),
             ),
         )
-    }
-}
-
-/// Helper mimicking a `Box<dyn FnOnce>` which doesn't exist because `FnOnce` isn't object safe.
-struct BoxDynFnOnce<Arg, Ret>(Box<dyn FnMut(Arg) -> Ret + Send>);
-impl<Arg: 'static, Ret: 'static> BoxDynFnOnce<Arg, Ret> {
-    /// Constructs a new `BoxDynFnOnce`
-    pub fn new(f: impl FnOnce(Arg) -> Ret + Send + 'static) -> Self {
-        let mut f = Some(f);
-        Self(Box::new(move |arg| {
-            let f = f
-                .take()
-                .unwrap_or_else(|| unreachable!("The BoxDynFnOnce can only be called once"));
-            f(arg)
-        }))
-    }
-
-    /// Calls the contained `FnOnce`
-    pub fn call(mut self, arg: Arg) -> Ret {
-        (self.0)(arg)
     }
 }
 
